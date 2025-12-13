@@ -1,0 +1,39 @@
+{
+  "name": "@atproto/did",
+  "version": "0.2.4",
+  "license": "MIT",
+  "description": "DID resolution and verification library",
+  "keywords": [
+    "atproto",
+    "did",
+    "validation",
+    "types"
+  ],
+  "homepage": "https://atproto.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bluesky-social/atproto",
+    "directory": "packages/did"
+  },
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@swc/jest": "^0.2.24",
+    "jest": "^28.1.2",
+    "typescript": "^5.6.3"
+  },
+  "scripts": {
+    "build": "tsc --build tsconfig.build.json",
+    "test": "jest"
+  }
+}

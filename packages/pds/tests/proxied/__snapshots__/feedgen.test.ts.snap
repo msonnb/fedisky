@@ -1,0 +1,215 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`feedgen proxy view performs basic proxy of getFeed 1`] = `
+Object {
+  "feed": Array [
+    Object {
+      "post": Object {
+        "author": Object {
+          "associated": Object {
+            "activitySubscription": Object {
+              "allowSubscriptions": "followers",
+            },
+          },
+          "avatar": "https://bsky.public.url/img/avatar/plain/user(1)/cids(1)@jpeg",
+          "createdAt": "1970-01-01T00:00:00.000Z",
+          "did": "user(0)",
+          "displayName": "ali",
+          "handle": "alice.test",
+          "labels": Array [
+            Object {
+              "cid": "cids(2)",
+              "cts": "1970-01-01T00:00:00.000Z",
+              "src": "user(0)",
+              "uri": "record(1)",
+              "val": "self-label-a",
+            },
+            Object {
+              "cid": "cids(2)",
+              "cts": "1970-01-01T00:00:00.000Z",
+              "src": "user(0)",
+              "uri": "record(1)",
+              "val": "self-label-b",
+            },
+          ],
+          "viewer": Object {
+            "blockedBy": false,
+            "muted": false,
+          },
+        },
+        "bookmarkCount": 0,
+        "cid": "cids(0)",
+        "indexedAt": "1970-01-01T00:00:00.000Z",
+        "labels": Array [
+          Object {
+            "cid": "cids(0)",
+            "cts": "1970-01-01T00:00:00.000Z",
+            "src": "user(0)",
+            "uri": "record(0)",
+            "val": "self-label",
+          },
+        ],
+        "likeCount": 0,
+        "quoteCount": 0,
+        "record": Object {
+          "$type": "app.bsky.feed.post",
+          "createdAt": "1970-01-01T00:00:00.000Z",
+          "labels": Object {
+            "$type": "com.atproto.label.defs#selfLabels",
+            "values": Array [
+              Object {
+                "val": "self-label",
+              },
+            ],
+          },
+          "text": "hey there",
+        },
+        "replyCount": 0,
+        "repostCount": 0,
+        "uri": "record(0)",
+        "viewer": Object {
+          "bookmarked": false,
+          "embeddingDisabled": false,
+          "threadMuted": false,
+        },
+      },
+    },
+    Object {
+      "post": Object {
+        "author": Object {
+          "associated": Object {
+            "activitySubscription": Object {
+              "allowSubscriptions": "followers",
+            },
+          },
+          "did": "user(2)",
+          "handle": "carol.test",
+          "labels": Array [],
+          "viewer": Object {
+            "blockedBy": false,
+            "followedBy": "record(4)",
+            "following": "record(3)",
+            "muted": false,
+          },
+        },
+        "bookmarkCount": 0,
+        "cid": "cids(3)",
+        "embed": Object {
+          "$type": "app.bsky.embed.recordWithMedia#view",
+          "media": Object {
+            "$type": "app.bsky.embed.images#view",
+            "images": Array [
+              Object {
+                "alt": "../dev-env/assets/key-landscape-small.jpg",
+                "fullsize": "https://bsky.public.url/img/feed_fullsize/plain/user(3)/cids(4)@jpeg",
+                "thumb": "https://bsky.public.url/img/feed_thumbnail/plain/user(3)/cids(4)@jpeg",
+              },
+              Object {
+                "alt": "../dev-env/assets/key-alt.jpg",
+                "fullsize": "https://bsky.public.url/img/feed_fullsize/plain/user(3)/cids(5)@jpeg",
+                "thumb": "https://bsky.public.url/img/feed_thumbnail/plain/user(3)/cids(5)@jpeg",
+              },
+            ],
+          },
+          "record": Object {
+            "record": Object {
+              "$type": "app.bsky.embed.record#viewRecord",
+              "author": Object {
+                "associated": Object {
+                  "activitySubscription": Object {
+                    "allowSubscriptions": "followers",
+                  },
+                },
+                "avatar": "https://bsky.public.url/img/avatar/plain/user(5)/cids(1)@jpeg",
+                "createdAt": "1970-01-01T00:00:00.000Z",
+                "did": "user(4)",
+                "displayName": "bobby",
+                "handle": "bob.test",
+                "labels": Array [],
+                "viewer": Object {
+                  "blockedBy": false,
+                  "followedBy": "record(7)",
+                  "following": "record(6)",
+                  "muted": false,
+                },
+              },
+              "cid": "cids(6)",
+              "embeds": Array [],
+              "indexedAt": "1970-01-01T00:00:00.000Z",
+              "labels": Array [],
+              "likeCount": 0,
+              "quoteCount": 1,
+              "replyCount": 0,
+              "repostCount": 0,
+              "uri": "record(5)",
+              "value": Object {
+                "$type": "app.bsky.feed.post",
+                "createdAt": "1970-01-01T00:00:00.000Z",
+                "langs": Array [
+                  "en-US",
+                  "i-klingon",
+                ],
+                "text": "bob back at it again!",
+              },
+            },
+          },
+        },
+        "indexedAt": "1970-01-01T00:00:00.000Z",
+        "labels": Array [],
+        "likeCount": 2,
+        "quoteCount": 1,
+        "record": Object {
+          "$type": "app.bsky.feed.post",
+          "createdAt": "1970-01-01T00:00:00.000Z",
+          "embed": Object {
+            "$type": "app.bsky.embed.recordWithMedia",
+            "media": Object {
+              "$type": "app.bsky.embed.images",
+              "images": Array [
+                Object {
+                  "alt": "../dev-env/assets/key-landscape-small.jpg",
+                  "image": Object {
+                    "$type": "blob",
+                    "mimeType": "image/jpeg",
+                    "ref": Object {
+                      "$link": "cids(4)",
+                    },
+                    "size": 4114,
+                  },
+                },
+                Object {
+                  "alt": "../dev-env/assets/key-alt.jpg",
+                  "image": Object {
+                    "$type": "blob",
+                    "mimeType": "image/jpeg",
+                    "ref": Object {
+                      "$link": "cids(5)",
+                    },
+                    "size": 12736,
+                  },
+                },
+              ],
+            },
+            "record": Object {
+              "record": Object {
+                "cid": "cids(6)",
+                "uri": "record(5)",
+              },
+            },
+          },
+          "text": "hi im carol",
+        },
+        "replyCount": 0,
+        "repostCount": 0,
+        "uri": "record(2)",
+        "viewer": Object {
+          "bookmarked": false,
+          "embeddingDisabled": false,
+          "like": "record(8)",
+          "threadMuted": false,
+        },
+      },
+    },
+  ],
+}
+`;

@@ -1,0 +1,41 @@
+{
+  "name": "@atproto/api",
+  "version": "0.18.13",
+  "license": "MIT",
+  "description": "Client library for atproto and Bluesky",
+  "keywords": [
+    "atproto",
+    "bluesky",
+    "api"
+  ],
+  "homepage": "https://atproto.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bluesky-social/atproto",
+    "directory": "packages/api"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "codegen": "node ./scripts/generate-code.mjs && lex gen-api --yes ./src/client ../../lexicons/com/atproto/*/* ../../lexicons/app/bsky/*/* ../../lexicons/chat/bsky/*/* ../../lexicons/tools/ozone/*/*",
+    "build": "tsc --build tsconfig.build.json",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@atproto/common-web": "workspace:^",
+    "@atproto/lexicon": "workspace:^",
+    "@atproto/syntax": "workspace:^",
+    "@atproto/xrpc": "workspace:^",
+    "await-lock": "^2.2.2",
+    "multiformats": "^9.9.0",
+    "tlds": "^1.234.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@atproto/lex-cli": "workspace:^",
+    "@jest/globals": "^28.1.3",
+    "jest": "^28.1.2",
+    "prettier": "^3.2.5",
+    "typescript": "^5.6.3"
+  }
+}
