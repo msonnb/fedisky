@@ -5,6 +5,7 @@ import * as record from './record'
 import * as recordBlob from './record-blob'
 import * as repoBlock from './repo-block'
 import * as repoRoot from './repo-root'
+import * as activitypub from './activitypub'
 
 export type DatabaseSchema = accountPref.PartialDB &
   repoRoot.PartialDB &
@@ -12,7 +13,9 @@ export type DatabaseSchema = accountPref.PartialDB &
   backlink.PartialDB &
   repoBlock.PartialDB &
   blob.PartialDB &
-  recordBlob.PartialDB
+  recordBlob.PartialDB &
+  activitypub.keyPair.PartialDB &
+  activitypub.follow.PartialDB
 
 export type { AccountPref } from './account-pref'
 export type { RepoRoot } from './repo-root'
@@ -21,3 +24,5 @@ export type { Backlink } from './backlink'
 export type { RepoBlock } from './repo-block'
 export type { Blob } from './blob'
 export type { RecordBlob } from './record-blob'
+export type { ActivityPubKeyPair } from './activitypub/key-pair'
+export type { ActivityPubFollow } from './activitypub/follow'

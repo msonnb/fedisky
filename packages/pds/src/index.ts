@@ -30,6 +30,7 @@ import { loggerMiddleware } from './logger'
 import { proxyHandler } from './pipethrough'
 import compression from './util/compression'
 import * as wellKnown from './well-known'
+import * as activitypub from './activitypub'
 
 export { createSecretKeyObject } from './auth-verifier'
 export * from './config'
@@ -162,6 +163,7 @@ export class PDS {
     app.use(basicRoutes.createRouter(ctx))
     app.use(wellKnown.createRouter(ctx))
     app.use(server.xrpc.router)
+    app.use(activitypub.createRouter(ctx))
     app.use(error.handler)
 
     return new PDS({

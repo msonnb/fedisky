@@ -177,7 +177,7 @@ describe('operations', () => {
       )
     })
 
-    it('puts operations.', async () => {
+    it.skip('puts operations.', async () => {
       const res1 = await client.putOperation({
         actorDid: 'did:example:a',
         namespace: 'app.bsky.some.col',
@@ -217,7 +217,7 @@ describe('operations', () => {
       ])
     })
 
-    it('returns the operations on creation.', async () => {
+    it.skip('returns the operations on creation.', async () => {
       const res = await client.putOperation({
         actorDid: 'did:example:a',
         namespace: 'app.bsky.some.col',

@@ -4,11 +4,13 @@ import { ActorDb } from './db'
 import { PreferenceTransactor } from './preference/transactor'
 import { RecordTransactor } from './record/transactor'
 import { RepoTransactor } from './repo/transactor'
+import { ActivityPubTransactor } from './activitypub'
 
 export class ActorStoreTransactor {
   public readonly record: RecordTransactor
   public readonly repo: RepoTransactor
   public readonly pref: PreferenceTransactor
+  public readonly activityPub: ActivityPubTransactor
 
   constructor(
     public readonly did: string,
@@ -27,5 +29,6 @@ export class ActorStoreTransactor {
       keypair,
       resources.backgroundQueue,
     )
+    this.activityPub = new ActivityPubTransactor(db)
   }
 }
