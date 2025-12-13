@@ -50,6 +50,7 @@ import { ModerationMailer } from './mailer/moderation'
 import { LocalViewer, LocalViewerCreator } from './read-after-write/viewer'
 import { getRedisClient } from './redis'
 import { Sequencer } from './sequencer'
+import { createFederation, Federation, MemoryKvStore } from '@fedify/fedify'
 
 export type AppContextOptions = {
   actorStore: ActorStore
@@ -76,6 +77,7 @@ export type AppContextOptions = {
   authVerifier: AuthVerifier
   plcRotationKey: crypto.Keypair
   cfg: ServerConfig
+  federation: Federation<void>
 }
 
 export class AppContext {
@@ -103,6 +105,7 @@ export class AppContext {
   public oauthProvider?: OAuthProvider
   public plcRotationKey: crypto.Keypair
   public cfg: ServerConfig
+  public federation: Federation<void>
 
   constructor(opts: AppContextOptions) {
     this.actorStore = opts.actorStore
@@ -129,6 +132,7 @@ export class AppContext {
     this.oauthProvider = opts.oauthProvider
     this.plcRotationKey = opts.plcRotationKey
     this.cfg = opts.cfg
+    this.federation = opts.federation
   }
 
   static async fromConfig(
@@ -449,6 +453,14 @@ export class AppContext {
       },
     )
 
+    const federation = createFederation<void>({
+      kv: new MemoryKvStore(),
+      // origin: {
+      //   handleHost: 'test',
+      //   webOrigin: 'http://localhost:2583',
+      // },
+    })
+
     return new AppContext({
       actorStore,
       blobstore,
@@ -474,6 +486,7 @@ export class AppContext {
       oauthProvider,
       plcRotationKey,
       cfg,
+      federation,
       ...(overrides ?? {}),
     })
   }

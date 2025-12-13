@@ -328,6 +328,10 @@ export const envToCfg = (env: ServerEnvironment): ServerConfig => {
     lexiconCfg.didAuthority = env.lexiconDidAuthority
   }
 
+  const activitypubCfg: ServerConfig['activitypub'] = {
+    noteCollection: env.activitypubNoteCollection ?? 'app.bsky.feed.post',
+  }
+
   return {
     service: serviceCfg,
     db: dbCfg,
@@ -349,6 +353,7 @@ export const envToCfg = (env: ServerEnvironment): ServerConfig => {
     lexicon: lexiconCfg,
     proxy: proxyCfg,
     oauth: oauthCfg,
+    activitypub: activitypubCfg,
   }
 }
 
@@ -373,6 +378,7 @@ export type ServerConfig = {
   proxy: ProxyConfig
   oauth: OAuthConfig
   lexicon: LexiconResolverConfig
+  activitypub: ActivitypubConfig
 }
 
 export type ServiceConfig = {
@@ -523,4 +529,8 @@ export type ModServiceConfig = {
 export type ReportServiceConfig = {
   url: string
   did: string
+}
+
+export type ActivitypubConfig = {
+  noteCollection: string
 }

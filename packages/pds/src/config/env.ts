@@ -154,6 +154,9 @@ export function readEnv() {
 
     // lexicon resolution
     lexiconDidAuthority: envStr('PDS_LEXICON_AUTHORITY_DID'),
+
+    // ActivityPub federation
+    activitypubNoteCollection: envStr('PDS_ACTIVITYPUB_NOTE_COLLECTION'),
   }
 }
 
