@@ -416,6 +416,10 @@ export const createRouter = (appCtx: AppContext) => {
             rkey: atUri.rkey,
             published: Temporal.Instant.from(post.value.createdAt as string),
             attachments,
+            langs: post.value.langs as string[] | undefined,
+            labels: post.value.labels as
+              | { values?: { val: string }[] }
+              | undefined,
           })
         })
 
@@ -467,6 +471,10 @@ export const createRouter = (appCtx: AppContext) => {
         rkey: atUri.rkey,
         published: Temporal.Instant.from(result.post.value.createdAt as string),
         attachments,
+        langs: result.post.value.langs as string[] | undefined,
+        labels: result.post.value.labels as
+          | { values?: { val: string }[] }
+          | undefined,
       })
     },
   )

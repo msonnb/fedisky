@@ -1,38 +1,42 @@
 import {
+  Collection,
   Create,
   Document,
+  LanguageString,
   Note,
   PUBLIC_COLLECTION,
   Context,
 } from '@fedify/fedify'
 import { Temporal } from '@js-temporal/polyfill'
 
-/** Represents a pre-built ActivityPub attachment */
 export interface ActivityPubAttachment {
   url: URL
   mediaType: string
   name?: string // alt text
 }
 
-export interface CreateNoteActivityParams {
-  /** The AT Protocol URI of the post (e.g., at://did:plc:xxx/app.bsky.feed.post/xxx) */
-  atUri: string
-  /** The DID of the author */
-  did: string
-  /** The text content of the note */
-  text: string
-  /** The rkey of the post */
-  rkey: string
-  /** Optional published timestamp (defaults to now) */
-  published?: Temporal.Instant
-  /** Pre-built ActivityPub attachments (images, videos) */
-  attachments?: ActivityPubAttachment[]
+const SENSITIVE_LABELS = ['porn', 'sexual', 'nudity', 'nsfl', 'gore']
+
+function hasSensitiveLabels(
+  labels?: { values?: { val: string }[] } | null,
+): boolean {
+  if (!labels?.values) return false
+  return labels.values.some((label) =>
+    SENSITIVE_LABELS.includes(label.val.toLowerCase()),
+  )
 }
 
-/**
- * Creates a `Create` activity containing a `Note` object for ActivityPub federation.
- * This is shared between createRecord, applyWrites, and the outbox dispatcher.
- */
+export interface CreateNoteActivityParams {
+  atUri: string
+  did: string
+  text: string
+  rkey: string
+  published?: Temporal.Instant
+  attachments?: ActivityPubAttachment[]
+  langs?: string[]
+  labels?: { values?: { val: string }[] } | null
+}
+
 export function buildCreateNoteActivity(
   ctx: Context<void>,
   params: CreateNoteActivityParams,
@@ -54,10 +58,6 @@ export function buildCreateNoteActivity(
   })
 }
 
-/**
- * Builds a Note object for ActivityPub (used in outbox).
- * Uses text/plain mediaType for fetched content.
- */
 export function buildNote(
   ctx: Context<void>,
   params: CreateNoteActivityParams,
@@ -69,6 +69,8 @@ export function buildNote(
     rkey,
     published = Temporal.Now.instant(),
     attachments,
+    langs,
+    labels,
   } = params
 
   const postUri = ctx.getObjectUri(Note, { uri: atUri })
@@ -76,7 +78,6 @@ export function buildNote(
   const cc = ctx.getFollowersUri(did)
   const actor = ctx.getActorUri(did)
 
-  // Build Document objects for attachments
   const attachmentDocs = attachments?.map(
     (att) =>
       new Document({
@@ -86,15 +87,44 @@ export function buildNote(
       }),
   )
 
+  const htmlContent = `<p>${text}</p>`
+
+  const contents =
+    langs && langs.length > 0
+      ? langs.map((lang) => new LanguageString(htmlContent, lang))
+      : undefined
+
+  const sensitive = hasSensitiveLabels(labels)
+
+  const repliesCollection = new Collection({
+    id: new URL(`${postUri.href}/replies`),
+    totalItems: 0,
+  })
+
+  const sharesCollection = new Collection({
+    id: new URL(`${postUri.href}/shares`),
+    totalItems: 0,
+  })
+
+  const likesCollection = new Collection({
+    id: new URL(`${postUri.href}/likes`),
+    totalItems: 0,
+  })
+
   return new Note({
     id: postUri,
     attribution: actor,
     to,
     cc,
-    content: `<p>${text}</p>`,
+    content: htmlContent,
+    contents,
     mediaType: 'text/html',
     published,
     url: new URL(`https://bsky.app/profile/${did}/post/${rkey}`),
     attachments: attachmentDocs,
+    sensitive,
+    replies: repliesCollection,
+    shares: sharesCollection,
+    likes: likesCollection,
   })
 }
