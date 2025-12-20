@@ -11,7 +11,7 @@
 set -e
 
 PDS_URL="http://localhost:2583"
-ALICE_HANDLE="bob.test"
+ALICE_HANDLE="alice.test"
 ALICE_PASSWORD="hunter2"
 
 POST_TEXT="${1:-Test post created at $(date -u +"%Y-%m-%dT%H:%M:%SZ")}"
