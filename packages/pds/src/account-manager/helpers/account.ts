@@ -86,6 +86,16 @@ export const getAccounts = async (
   return results
 }
 
+export const getAccountCount = async (
+  db: AccountDb,
+  flags?: AvailabilityFlags,
+): Promise<number> => {
+  const count = await selectAccountQB(db, flags)
+    .select((qb) => qb.fn.count<number>('account.did').as('count'))
+    .executeTakeFirst()
+  return count?.count ?? 0
+}
+
 export const getAccountByEmail = async (
   db: AccountDb,
   email: string,

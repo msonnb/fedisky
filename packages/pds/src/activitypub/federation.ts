@@ -1,11 +1,10 @@
 import {
   Accept,
-  createFederation,
   exportJwk,
   Follow,
   generateCryptoKeyPair,
+  Image,
   importJwk,
-  MemoryKvStore,
   Note,
   parseSemVer,
   Person,
@@ -15,10 +14,86 @@ import { AppContext } from '../context'
 import { integrateFederation } from '@fedify/express'
 import { Temporal } from '@js-temporal/polyfill'
 import { AtUri } from '@atproto/syntax'
-import { buildCreateNoteActivity, buildNote } from './note'
+import {
+  buildCreateNoteActivity,
+  buildNote,
+  type ActivityPubAttachment,
+} from './note'
+import { BlobRef } from '@atproto/lexicon'
+import { LocalViewer } from '../read-after-write/viewer'
+import {
+  isMain as isEmbedImages,
+  type Main as EmbedImages,
+} from '../lexicon/types/app/bsky/embed/images'
+import {
+  isMain as isEmbedVideo,
+  type Main as EmbedVideo,
+} from '../lexicon/types/app/bsky/embed/video'
+import {
+  isMain as isEmbedRecordWithMedia,
+  type Main as EmbedRecordWithMedia,
+} from '../lexicon/types/app/bsky/embed/recordWithMedia'
+
+function buildAttachmentsFromEmbed(
+  localViewer: LocalViewer,
+  embed: unknown,
+): ActivityPubAttachment[] {
+  const attachments: ActivityPubAttachment[] = []
+
+  if (!embed) {
+    return attachments
+  }
+
+  if (isEmbedImages(embed)) {
+    const imagesEmbed = embed as EmbedImages
+    for (const img of imagesEmbed.images) {
+      const blobRef = BlobRef.asBlobRef(img.image)
+      if (blobRef) {
+        const url = localViewer.getImageUrl(
+          'feed_fullsize',
+          blobRef.ref.toString(),
+        )
+        attachments.push({
+          url: new URL(url),
+          mediaType: blobRef.mimeType,
+          name: img.alt || undefined,
+        })
+      }
+    }
+  }
+
+  if (isEmbedVideo(embed)) {
+    const videoEmbed = embed as EmbedVideo
+    const blobRef = BlobRef.asBlobRef(videoEmbed.video)
+    if (blobRef) {
+      const url = localViewer.getImageUrl(
+        'feed_fullsize',
+        blobRef.ref.toString(),
+      )
+      attachments.push({
+        url: new URL(url),
+        mediaType: blobRef.mimeType,
+        name: videoEmbed.alt || undefined,
+      })
+    }
+  }
+
+  if (isEmbedRecordWithMedia(embed)) {
+    const recordWithMedia = embed as EmbedRecordWithMedia
+    const mediaAttachments = buildAttachmentsFromEmbed(
+      localViewer,
+      recordWithMedia.media,
+    )
+    attachments.push(...mediaAttachments)
+  }
+
+  return attachments
+}
 
 export const createRouter = (appCtx: AppContext) => {
   appCtx.federation.setNodeInfoDispatcher('/nodeinfo/2.1', async (ctx) => {
+    const accountCount = await appCtx.accountManager.getAccountCount()
+
     return {
       software: {
         name: 'bluesky-pds',
@@ -28,7 +103,7 @@ export const createRouter = (appCtx: AppContext) => {
       },
       protocols: ['activitypub'],
       usage: {
-        users: { total: 1 },
+        users: { total: accountCount },
         localPosts: 0,
         localComments: 0,
       },
@@ -42,40 +117,48 @@ export const createRouter = (appCtx: AppContext) => {
       }
 
       const account = await appCtx.accountManager.getAccount(identifier)
-      if (!account) {
+      if (!account || !account.handle) {
         return null
       }
 
       const profile = await appCtx.actorStore.read(
         identifier,
         async (store) => {
-          return store.record.getProfileRecord()
+          const localViewer = appCtx.localViewer(store)
+          const profile = await store.record.getProfileRecord()
+
+          const buildImage = (type: 'avatar' | 'banner', blob?: BlobRef) => {
+            if (!blob) return undefined
+            const url = localViewer.getImageUrl(type, blob.ref.toString())
+            return { url: new URL(url), mediaType: blob.mimeType }
+          }
+
+          return {
+            ...profile,
+            avatar: buildImage('avatar', profile?.avatar),
+            banner: buildImage('banner', profile?.banner),
+          }
         },
       )
 
-      if (!profile) {
-        return null
-      }
-
-      const actorUri = ctx.getActorUri(identifier)
-
-      console.log(profile)
-      console.log(actorUri.host)
-      console.log(appCtx.cfg.identity.serviceHandleDomains)
-
-      if (!account.handle) {
-        return null
-      }
-
-      // if (!supportedActor) {
-      //   return null
-      // }
       const keyPairs = await ctx.getActorKeyPairs(identifier)
       return new Person({
         id: ctx.getActorUri(identifier),
         name: profile.displayName,
         summary: profile.description,
         preferredUsername: account.handle.split('.').at(0),
+        icon: profile.avatar
+          ? new Image({
+              url: profile.avatar.url,
+              mediaType: profile.avatar.mediaType,
+            })
+          : undefined,
+        image: profile.banner
+          ? new Image({
+              url: profile.banner.url,
+              mediaType: profile.banner.mediaType,
+            })
+          : undefined,
         url: new URL(account.handle, 'https://bsky.app/profile/'),
         inbox: ctx.getInboxUri(identifier),
         outbox: ctx.getOutboxUri(identifier),
@@ -299,15 +382,17 @@ export const createRouter = (appCtx: AppContext) => {
       '/users/{+identifier}/outbox',
       async (ctx, identifier, cursor) => {
         const limit = 50
-        const posts = await appCtx.actorStore.read(
+        const { posts, localViewer } = await appCtx.actorStore.read(
           identifier,
           async (store) => {
-            return store.record.listRecordsForCollection({
+            const localViewer = appCtx.localViewer(store)
+            const posts = await store.record.listRecordsForCollection({
               collection: appCtx.cfg.activitypub.noteCollection,
               limit: limit + 1,
               reverse: true,
               cursor: cursor ?? undefined,
             })
+            return { posts, localViewer }
           },
         )
 
@@ -320,12 +405,17 @@ export const createRouter = (appCtx: AppContext) => {
 
         const items = posts.map((post) => {
           const atUri = new AtUri(post.uri)
+          const attachments = buildAttachmentsFromEmbed(
+            localViewer,
+            post.value.embed,
+          )
           return buildCreateNoteActivity(ctx, {
             atUri: post.uri,
             did: identifier,
             text: post.value.text as string,
             rkey: atUri.rkey,
             published: Temporal.Instant.from(post.value.createdAt as string),
+            attachments,
           })
         })
 
@@ -352,23 +442,31 @@ export const createRouter = (appCtx: AppContext) => {
     '/posts/{+uri}',
     async (ctx, values) => {
       const atUri = new AtUri(values.uri)
-      const post = await appCtx.actorStore.read(
+      const result = await appCtx.actorStore.read(
         atUri.hostname,
         async (store) => {
-          return store.record.getRecord(atUri, null)
+          const localViewer = appCtx.localViewer(store)
+          const post = await store.record.getRecord(atUri, null)
+          return { post, localViewer }
         },
       )
 
-      if (!post) {
+      if (!result.post) {
         return null
       }
+
+      const attachments = buildAttachmentsFromEmbed(
+        result.localViewer,
+        result.post.value.embed,
+      )
 
       return buildNote(ctx, {
         atUri: values.uri,
         did: atUri.hostname,
-        text: post.value.text as string,
+        text: result.post.value.text as string,
         rkey: atUri.rkey,
-        published: Temporal.Instant.from(post.value.createdAt as string),
+        published: Temporal.Instant.from(result.post.value.createdAt as string),
+        attachments,
       })
     },
   )
