@@ -22,7 +22,6 @@ import {
   prepareDelete,
   prepareUpdate,
 } from '../../../../repo'
-import { buildCreateNoteActivity } from '../../../../activitypub'
 
 const ratelimitPoints = ({ input }: { input: HandlerInput }) => {
   let points = 0
@@ -165,41 +164,6 @@ export default function (server: Server, ctx: AppContext) {
             'failed to update account root',
           )
         })
-
-      // Send ActivityPub Create activities for new posts
-      const noteCreates = preparedWrites.filter(
-        (w): w is PreparedCreate =>
-          w.action === WriteOpAction.Create &&
-          w.uri.collection === ctx.cfg.activitypub.noteCollection,
-      )
-      if (noteCreates.length > 0) {
-        try {
-          const fedifyCtx = ctx.federation.createContext(
-            new URL(`https://${ctx.cfg.service.hostname}`),
-          )
-          for (const write of noteCreates) {
-            const activity = buildCreateNoteActivity(fedifyCtx, {
-              atUri: write.uri.toString(),
-              did,
-              text: write.record.text as string,
-              rkey: write.uri.rkey,
-            })
-
-            dbLogger.info(
-              { actor: activity.actorId, postUri: activity.objectId },
-              'sending activitypub create',
-            )
-
-            await fedifyCtx.sendActivity(
-              { identifier: did },
-              'followers',
-              activity,
-            )
-          }
-        } catch (err) {
-          dbLogger.error({ err, did }, 'failed to send activitypub creates')
-        }
-      }
 
       return {
         encoding: 'application/json',
