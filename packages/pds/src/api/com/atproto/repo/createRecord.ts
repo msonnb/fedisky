@@ -11,7 +11,6 @@ import {
   prepareCreate,
   prepareDelete,
 } from '../../../../repo'
-import { buildCreateNoteActivity } from '../../../../activitypub'
 
 export default function (server: Server, ctx: AppContext) {
   server.com.atproto.repo.createRecord({
@@ -41,7 +40,7 @@ export default function (server: Server, ctx: AppContext) {
         calcPoints: () => 3,
       },
     ],
-    handler: async ({ input, auth, req }) => {
+    handler: async ({ input, auth }) => {
       const { repo, collection, rkey, record, swapCommit, validate } =
         input.body
 
@@ -119,33 +118,6 @@ export default function (server: Server, ctx: AppContext) {
             'failed to update account root',
           )
         })
-
-      if (collection === ctx.cfg.activitypub.noteCollection) {
-        try {
-          const fedifyCtx = ctx.federation.createContext(
-            new URL(`https://${ctx.cfg.service.hostname}`),
-          )
-          const activity = buildCreateNoteActivity(fedifyCtx, {
-            atUri: write.uri.toString(),
-            did,
-            text: write.record.text as string,
-            rkey: write.uri.rkey,
-          })
-
-          dbLogger.info(
-            { actor: activity.actorId, postUri: activity.objectId },
-            'sending activitypub create',
-          )
-
-          await fedifyCtx.sendActivity(
-            { identifier: did },
-            'followers',
-            activity,
-          )
-        } catch (err) {
-          dbLogger.error({ err, did }, 'failed to send activitypub create')
-        }
-      }
 
       return {
         encoding: 'application/json',

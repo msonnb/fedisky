@@ -31,6 +31,7 @@ import { proxyHandler } from './pipethrough'
 import compression from './util/compression'
 import * as wellKnown from './well-known'
 import * as activitypub from './activitypub'
+import { APOutbox } from './activitypub/outbox'
 
 export { createSecretKeyObject } from './auth-verifier'
 export * from './config'
@@ -174,6 +175,8 @@ export class PDS {
 
   async start(): Promise<http.Server> {
     await this.ctx.sequencer.start()
+    const apOutbox = new APOutbox(this.ctx, this.ctx.sequencer)
+    apOutbox.start()
     const server = this.app.listen(this.ctx.cfg.service.port)
     this.server = server
     this.server.keepAliveTimeout = 90000
