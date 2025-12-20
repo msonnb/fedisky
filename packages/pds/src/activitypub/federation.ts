@@ -14,81 +14,11 @@ import { AppContext } from '../context'
 import { integrateFederation } from '@fedify/express'
 import { Temporal } from '@js-temporal/polyfill'
 import { AtUri } from '@atproto/syntax'
-import {
-  buildCreateNoteActivity,
-  buildNote,
-  type ActivityPubAttachment,
-} from './note'
 import { BlobRef } from '@atproto/lexicon'
-import { LocalViewer } from '../read-after-write/viewer'
-import {
-  isMain as isEmbedImages,
-  type Main as EmbedImages,
-} from '../lexicon/types/app/bsky/embed/images'
-import {
-  isMain as isEmbedVideo,
-  type Main as EmbedVideo,
-} from '../lexicon/types/app/bsky/embed/video'
-import {
-  isMain as isEmbedRecordWithMedia,
-  type Main as EmbedRecordWithMedia,
-} from '../lexicon/types/app/bsky/embed/recordWithMedia'
+import { RecordConverterRegistry, postConverter } from './conversion'
 
-function buildAttachmentsFromEmbed(
-  localViewer: LocalViewer,
-  embed: unknown,
-): ActivityPubAttachment[] {
-  const attachments: ActivityPubAttachment[] = []
-
-  if (!embed) {
-    return attachments
-  }
-
-  if (isEmbedImages(embed)) {
-    const imagesEmbed = embed as EmbedImages
-    for (const img of imagesEmbed.images) {
-      const blobRef = BlobRef.asBlobRef(img.image)
-      if (blobRef) {
-        const url = localViewer.getImageUrl(
-          'feed_fullsize',
-          blobRef.ref.toString(),
-        )
-        attachments.push({
-          url: new URL(url),
-          mediaType: blobRef.mimeType,
-          name: img.alt || undefined,
-        })
-      }
-    }
-  }
-
-  if (isEmbedVideo(embed)) {
-    const videoEmbed = embed as EmbedVideo
-    const blobRef = BlobRef.asBlobRef(videoEmbed.video)
-    if (blobRef) {
-      const url = localViewer.getImageUrl(
-        'feed_fullsize',
-        blobRef.ref.toString(),
-      )
-      attachments.push({
-        url: new URL(url),
-        mediaType: blobRef.mimeType,
-        name: videoEmbed.alt || undefined,
-      })
-    }
-  }
-
-  if (isEmbedRecordWithMedia(embed)) {
-    const recordWithMedia = embed as EmbedRecordWithMedia
-    const mediaAttachments = buildAttachmentsFromEmbed(
-      localViewer,
-      recordWithMedia.media,
-    )
-    attachments.push(...mediaAttachments)
-  }
-
-  return attachments
-}
+export const recordConverterRegistry = new RecordConverterRegistry()
+recordConverterRegistry.register(postConverter)
 
 export const createRouter = (appCtx: AppContext) => {
   appCtx.federation.setNodeInfoDispatcher('/nodeinfo/2.1', async (ctx) => {
@@ -382,62 +312,73 @@ export const createRouter = (appCtx: AppContext) => {
       '/users/{+identifier}/outbox',
       async (ctx, identifier, cursor) => {
         const limit = 50
-        const { posts, localViewer } = await appCtx.actorStore.read(
+        const { records, localViewer } = await appCtx.actorStore.read(
           identifier,
           async (store) => {
             const localViewer = appCtx.localViewer(store)
-            const posts = await store.record.listRecordsForCollection({
-              collection: appCtx.cfg.activitypub.noteCollection,
+            const records = await store.record.listRecordsForCollections({
+              collections: recordConverterRegistry
+                .getAll()
+                .map((converter) => converter.collection),
               limit: limit + 1,
               reverse: true,
               cursor: cursor ?? undefined,
             })
-            return { posts, localViewer }
+            return { records, localViewer }
           },
         )
 
         let nextCursor: string | null = null
-        if (posts.length > limit) {
-          posts.pop()
-          const lastPost = posts[posts.length - 1]
+        if (records.length > limit) {
+          records.pop()
+          const lastPost = records[records.length - 1]
           nextCursor = new AtUri(lastPost.uri).rkey
         }
 
-        const items = posts.map((post) => {
-          const atUri = new AtUri(post.uri)
-          const attachments = buildAttachmentsFromEmbed(
-            localViewer,
-            post.value.embed,
-          )
-          return buildCreateNoteActivity(ctx, {
-            atUri: post.uri,
-            did: identifier,
-            text: post.value.text as string,
-            rkey: atUri.rkey,
-            published: Temporal.Instant.from(post.value.createdAt as string),
-            attachments,
-            langs: post.value.langs as string[] | undefined,
-            labels: post.value.labels as
-              | { values?: { val: string }[] }
-              | undefined,
-          })
-        })
+        const items = await Promise.all(
+          records.map(async (record) => {
+            const atUri = new AtUri(record.uri)
+            const recordConverter = recordConverterRegistry.get(
+              atUri.collection,
+            )
+            if (!recordConverter) {
+              return null
+            }
+
+            const conversionResult = await recordConverter.toActivityPub(
+              ctx,
+              identifier,
+              record,
+              localViewer,
+            )
+
+            if (!conversionResult || !conversionResult.activity) {
+              return null
+            }
+
+            return conversionResult.activity
+          }),
+        )
 
         return {
-          items,
+          items: items.filter((item) => item !== null),
           nextCursor,
         }
       },
     )
     .setCounter(async (ctx, identifier) => {
-      const posts = await appCtx.actorStore.read(identifier, async (store) => {
-        return store.record.listRecordsForCollection({
-          collection: 'app.bsky.feed.post',
-          limit: 10000,
-          reverse: true,
-        })
-      })
-      return posts.length
+      const records = await appCtx.actorStore.read(
+        identifier,
+        async (store) =>
+          await store.record.listRecordsForCollections({
+            collections: recordConverterRegistry
+              .getAll()
+              .map((converter) => converter.collection),
+            limit: 10000,
+            reverse: true,
+          }),
+      )
+      return records.length
     })
     .setFirstCursor(() => '')
 
@@ -446,36 +387,35 @@ export const createRouter = (appCtx: AppContext) => {
     '/posts/{+uri}',
     async (ctx, values) => {
       const atUri = new AtUri(values.uri)
-      const result = await appCtx.actorStore.read(
-        atUri.hostname,
-        async (store) => {
-          const localViewer = appCtx.localViewer(store)
-          const post = await store.record.getRecord(atUri, null)
-          return { post, localViewer }
-        },
-      )
+      const identifier = atUri.hostname
+      const recordConverter = recordConverterRegistry.get(atUri.collection)
 
-      if (!result.post) {
+      if (!recordConverter) {
         return null
       }
 
-      const attachments = buildAttachmentsFromEmbed(
+      const result = await appCtx.actorStore.read(identifier, async (store) => {
+        const localViewer = appCtx.localViewer(store)
+        const record = await store.record.getRecord(atUri, null)
+        return { record, localViewer }
+      })
+
+      if (!result.record) {
+        return null
+      }
+
+      const conversionResult = await recordConverter.toActivityPub(
+        ctx,
+        identifier,
+        result.record,
         result.localViewer,
-        result.post.value.embed,
       )
 
-      return buildNote(ctx, {
-        atUri: values.uri,
-        did: atUri.hostname,
-        text: result.post.value.text as string,
-        rkey: atUri.rkey,
-        published: Temporal.Instant.from(result.post.value.createdAt as string),
-        attachments,
-        langs: result.post.value.langs as string[] | undefined,
-        labels: result.post.value.labels as
-          | { values?: { val: string }[] }
-          | undefined,
-      })
+      if (!conversionResult) {
+        return null
+      }
+
+      return conversionResult.object
     },
   )
 
