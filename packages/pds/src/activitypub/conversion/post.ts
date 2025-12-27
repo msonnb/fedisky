@@ -65,6 +65,7 @@ export const postConverter: RecordConverter<PostRecord> = {
       replies,
       shares,
       likes,
+      attachments: buildAttachmentsFromEmbed(localViewer, post.embed),
     })
 
     return {
@@ -79,7 +80,6 @@ export const postConverter: RecordConverter<PostRecord> = {
         to,
         cc,
         object: note,
-        attachments: buildAttachmentsFromEmbed(localViewer, post.embed),
       }),
     }
   },
@@ -103,7 +103,7 @@ function buildAttachmentsFromEmbed(
   if (isEmbedImages(embed)) {
     const imagesEmbed = embed as EmbedImages
     for (const img of imagesEmbed.images) {
-      const blobRef = BlobRef.asBlobRef(img.image.original)
+      const blobRef = BlobRef.asBlobRef(img.image)
       if (blobRef) {
         const url = localViewer.getImageUrl(
           'feed_fullsize',
@@ -122,7 +122,7 @@ function buildAttachmentsFromEmbed(
 
   if (isEmbedVideo(embed)) {
     const videoEmbed = embed as EmbedVideo
-    const blobRef = BlobRef.asBlobRef(videoEmbed.video.original)
+    const blobRef = BlobRef.asBlobRef(videoEmbed.video)
     if (blobRef) {
       const url = localViewer.getImageUrl(
         'feed_fullsize',
