@@ -218,15 +218,15 @@ describe('activitypub post conversion', () => {
         outbox.items ||
         (outbox.first?.orderedItems ?? [])
 
-      // Find the post with image
+      // Find the post with image (attachments are on the Note object, not the activity)
       const imageActivity = items.find(
-        (item: { attachment?: unknown[] }) =>
-          item.attachment && item.attachment.length > 0,
+        (item: { object?: { attachment?: unknown[] } }) =>
+          item.object?.attachment && item.object.attachment.length > 0,
       )
 
       if (imageActivity) {
-        expect(imageActivity.attachment.length).toBeGreaterThan(0)
-        const attachment = imageActivity.attachment[0]
+        expect(imageActivity.object.attachment.length).toBeGreaterThan(0)
+        const attachment = imageActivity.object.attachment[0]
         expect(attachment.type).toBe('Document')
         expect(attachment.mediaType).toBe('image/jpeg')
         expect(attachment.url).toBeDefined()
