@@ -35,10 +35,10 @@ export const postConverter: RecordConverter<PostRecord> = {
       ? ctx.getObjectUri(Note, { uri: post.reply.parent.uri })
       : undefined
     const content = plainTextToHtml(post.text)
-    const contents =
-      post.langs && post.langs.length > 0
-        ? post.langs.map((lang) => new LanguageString(content, lang))
-        : undefined
+    const contents: Array<string | LanguageString> = [content]
+    contents.concat(
+      post.langs?.map((lang) => new LanguageString(content, lang)) ?? [],
+    )
     const replies = new Collection({
       id: new URL(`${apUri.href}/replies`),
       totalItems: 0,
@@ -58,7 +58,6 @@ export const postConverter: RecordConverter<PostRecord> = {
       attribution: actor,
       to,
       cc,
-      content,
       mediaType: 'text/html',
       published,
       replyTarget,
@@ -104,7 +103,7 @@ function buildAttachmentsFromEmbed(
   if (isEmbedImages(embed)) {
     const imagesEmbed = embed as EmbedImages
     for (const img of imagesEmbed.images) {
-      const blobRef = BlobRef.asBlobRef(img.image)
+      const blobRef = BlobRef.asBlobRef(img.image.original)
       if (blobRef) {
         const url = localViewer.getImageUrl(
           'feed_fullsize',
@@ -123,7 +122,7 @@ function buildAttachmentsFromEmbed(
 
   if (isEmbedVideo(embed)) {
     const videoEmbed = embed as EmbedVideo
-    const blobRef = BlobRef.asBlobRef(videoEmbed.video)
+    const blobRef = BlobRef.asBlobRef(videoEmbed.video.original)
     if (blobRef) {
       const url = localViewer.getImageUrl(
         'feed_fullsize',
