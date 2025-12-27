@@ -16,8 +16,14 @@ export class APOutbox {
   }
 
   async start() {
-    for await (const evt of this.outbox.events()) {
-      await this.processEvent(evt)
+    apLogger.info('starting ActivityPub outbox processor')
+    try {
+      for await (const evt of this.outbox.events()) {
+        await this.processEvent(evt)
+      }
+    } catch (err) {
+      apLogger.error({ err }, 'ActivityPub outbox processor crashed')
+      throw err
     }
   }
 
@@ -26,14 +32,18 @@ export class APOutbox {
 
     for (const op of evt.evt.ops) {
       if (op.action === 'create') {
-        const recordConverter = recordConverterRegistry.get(
-          op.path.split('/')[0],
-        )
+        const collection = op.path.split('/')[0]
+        const recordConverter = recordConverterRegistry.get(collection)
         if (!recordConverter) {
+          apLogger.debug(
+            { collection, path: op.path },
+            'no converter registered for collection, skipping',
+          )
           continue
         }
 
         const did = evt.evt.repo
+        const uri = `at://${did}/${op.path}`
         const fedifyContext = this.ctx.federation.createContext(
           new URL(`https://${this.ctx.cfg.service.hostname}`),
         )
@@ -47,33 +57,52 @@ export class APOutbox {
           result = await this.ctx.actorStore.read(did, async (store) => {
             const localViewer = this.ctx.localViewer(store)
 
-            const record = await store.record.getRecord(
-              new AtUri(`at://${did}/${op.path}`),
-              null,
-            )
+            const record = await store.record.getRecord(new AtUri(uri), null)
 
             return { record, localViewer }
           })
         } catch (err) {
-          // Repo may have been deleted, skip this event
-          apLogger.debug({ did, err }, 'skipping event for non-existent repo')
+          apLogger.debug(
+            { did, uri, err },
+            'skipping event: failed to read actor store (repo may have been deleted)',
+          )
           continue
         }
 
         if (!result?.record) {
+          apLogger.debug({ did, uri }, 'skipping event: record not found')
           continue
         }
-        const conversionResult = await recordConverter.toActivityPub(
-          fedifyContext,
-          did,
-          result.record,
-          result.localViewer,
-        )
+
+        let conversionResult
+        try {
+          conversionResult = await recordConverter.toActivityPub(
+            fedifyContext,
+            did,
+            result.record,
+            result.localViewer,
+          )
+        } catch (err) {
+          apLogger.warn(
+            { did, uri, err },
+            'failed to convert record to ActivityPub',
+          )
+          continue
+        }
+
         if (!conversionResult) {
+          apLogger.debug(
+            { did, uri },
+            'skipping event: conversion returned null',
+          )
           continue
         }
         const activity = conversionResult.activity
         if (!activity) {
+          apLogger.debug(
+            { did, uri },
+            'skipping event: conversion returned no activity',
+          )
           continue
         }
 
@@ -86,19 +115,22 @@ export class APOutbox {
           apLogger.info(
             {
               did,
+              uri,
               activity: {
-                id: activity.id,
-                actor: activity.actorId,
+                id: activity.id?.href,
+                actor: activity.actorId?.href,
                 to: activity.toId,
                 cc: activity.ccId,
-                objectId: activity.objectId,
+                objectId: activity.objectId?.href,
               },
             },
-            'sent activity',
+            'sent activity to followers',
           )
         } catch (err) {
-          // Failed to send activity, log and continue
-          apLogger.warn({ did, err }, 'failed to send activity')
+          apLogger.warn(
+            { did, uri, activityId: activity.id?.href, err },
+            'failed to send activity to followers',
+          )
         }
       }
     }
