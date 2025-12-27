@@ -3,6 +3,7 @@ import AppContext from '../context'
 import { recordConverterRegistry } from './federation'
 import { AtUri } from '@atproto/syntax'
 import { apLogger } from '../logger'
+import { LocalViewer } from '../read-after-write/viewer'
 
 export class APOutbox {
   private outbox: Outbox
@@ -36,18 +37,30 @@ export class APOutbox {
         const fedifyContext = this.ctx.federation.createContext(
           new URL(`https://${this.ctx.cfg.service.hostname}`),
         )
-        const result = await this.ctx.actorStore.read(did, async (store) => {
-          const localViewer = this.ctx.localViewer(store)
 
-          const record = await store.record.getRecord(
-            new AtUri(`at://${did}/${op.path}`),
-            null,
-          )
+        let result: {
+          record: { uri: string; cid: string; value: unknown } | null
+          localViewer: LocalViewer
+        } | null = null
 
-          return { record, localViewer }
-        })
+        try {
+          result = await this.ctx.actorStore.read(did, async (store) => {
+            const localViewer = this.ctx.localViewer(store)
 
-        if (!result.record) {
+            const record = await store.record.getRecord(
+              new AtUri(`at://${did}/${op.path}`),
+              null,
+            )
+
+            return { record, localViewer }
+          })
+        } catch (err) {
+          // Repo may have been deleted, skip this event
+          apLogger.debug({ did, err }, 'skipping event for non-existent repo')
+          continue
+        }
+
+        if (!result?.record) {
           continue
         }
         const conversionResult = await recordConverter.toActivityPub(
@@ -63,12 +76,30 @@ export class APOutbox {
         if (!activity) {
           continue
         }
-        await fedifyContext.sendActivity(
-          { identifier: did },
-          'followers',
-          activity,
-        )
-        apLogger.info({ did, activity }, 'sent activity')
+
+        try {
+          await fedifyContext.sendActivity(
+            { identifier: did },
+            'followers',
+            activity,
+          )
+          apLogger.info(
+            {
+              did,
+              activity: {
+                id: activity.id,
+                actor: activity.actorId,
+                to: activity.toId,
+                cc: activity.ccId,
+                objectId: activity.objectId,
+              },
+            },
+            'sent activity',
+          )
+        } catch (err) {
+          // Failed to send activity, log and continue
+          apLogger.warn({ did, err }, 'failed to send activity')
+        }
       }
     }
   }
