@@ -45,7 +45,8 @@ export class APOutbox {
         const did = evt.evt.repo
         const uri = `at://${did}/${op.path}`
         const fedifyContext = this.ctx.federation.createContext(
-          new URL(`https://${this.ctx.cfg.service.hostname}`),
+          //new URL(`https://${this.ctx.cfg.service.hostname}`),
+          new URL('https://fa04a8aa3e69.ngrok-free.app'),
         )
 
         let result: {

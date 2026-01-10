@@ -32,6 +32,7 @@ import compression from './util/compression'
 import * as wellKnown from './well-known'
 import * as activitypub from './activitypub'
 import { APOutbox } from './activitypub/outbox'
+import { ensureServiceAccount } from './service-account'
 
 export { createSecretKeyObject } from './auth-verifier'
 export * from './config'
@@ -175,6 +176,7 @@ export class PDS {
 
   async start(): Promise<http.Server> {
     await this.ctx.sequencer.start()
+    await ensureServiceAccount(this.ctx)
     const apOutbox = new APOutbox(this.ctx, this.ctx.sequencer)
     apOutbox.start()
     const server = this.app.listen(this.ctx.cfg.service.port)
