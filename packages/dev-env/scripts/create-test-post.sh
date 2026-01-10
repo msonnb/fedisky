@@ -12,8 +12,8 @@
 
 set -e
 
-PDS_URL="http://localhost:2583"
-ALICE_HANDLE="alice.test"
+PDS_URL="https://fa04a8aa3e69.ngrok-free.app"
+ALICE_HANDLE="bob.test"
 ALICE_PASSWORD="hunter2"
 
 IMAGE_PATH=""

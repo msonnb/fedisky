@@ -1,12 +1,15 @@
 import type { Activity, Object as APObject, Context } from '@fedify/fedify'
+import type { BlobTransactor } from '../../actor-store/blob/transactor'
 import { LocalViewer } from '../../read-after-write/viewer'
 
-type APConversionResult = {
-  object: APObject
-  activity?: Activity
+export interface ToRecordContext {
+  blobTransactor?: BlobTransactor
 }
 
-export interface RecordConverter<T = unknown> {
+export interface RecordConverter<
+  T = unknown,
+  TObject extends APObject = APObject,
+> {
   collection: string
 
   toActivityPub(
@@ -14,7 +17,14 @@ export interface RecordConverter<T = unknown> {
     identifier: string,
     record: { uri: string; cid: string; value: T },
     localViewer: LocalViewer,
-  ): Promise<APConversionResult | null>
+  ): Promise<{ object: TObject; activity?: Activity } | null>
+
+  toRecord(
+    ctx: Context<void>,
+    identifier: string,
+    object: TObject,
+    options?: ToRecordContext,
+  ): Promise<{ uri: string; cid: string; value: T } | null>
 
   objectTypes?: Array<typeof APObject>
 }

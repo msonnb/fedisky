@@ -1,5 +1,6 @@
 import {
   Accept,
+  Create,
   exportJwk,
   Follow,
   generateCryptoKeyPair,
@@ -442,6 +443,161 @@ export const createRouter = (appCtx: AppContext) => {
         apLogger.error(
           { err, undoId: undo.id?.href, actorId: undo.actorId?.href },
           'failed to process undo activity',
+        )
+        throw err
+      }
+    })
+    .on(Create, async (ctx, create) => {
+      try {
+        const object = await create.getObject()
+        if (!(object instanceof Note)) {
+          apLogger.debug(
+            { createId: create.id?.href },
+            'ignoring create: object is not a Note',
+          )
+          return
+        }
+
+        const replyTargetId = object.replyTargetId
+        if (!replyTargetId) {
+          apLogger.debug(
+            { noteId: object.id?.href },
+            'ignoring create: not a reply',
+          )
+          return
+        }
+
+        const parsed = ctx.parseUri(replyTargetId)
+        if (!parsed || parsed.type !== 'object') {
+          apLogger.debug(
+            { replyTargetId: replyTargetId.href },
+            'ignoring create: reply target is not a local object',
+          )
+          return
+        }
+
+        // Extract the identifier (DID) from the reply target
+        // The reply target URL should be like /posts/at://did:plc:xxx/app.bsky.feed.post/rkey
+        const urlPath = replyTargetId.pathname
+        const postUri = urlPath.slice(
+          urlPath.indexOf('posts/') + 'posts/'.length,
+        )
+        const postAtUri = new AtUri(postUri)
+        const postAuthorDid = postAtUri.host
+        const account = await appCtx.accountManager.getAccount(postAuthorDid)
+        if (!account) {
+          apLogger.debug(
+            { postAuthorDid },
+            'ignoring create: reply target user not found',
+          )
+          return
+        }
+
+        const actor = await create.getActor()
+        if (!actor) {
+          apLogger.warn(
+            { createId: create.id?.href },
+            'ignoring create: could not fetch actor',
+          )
+          return
+        }
+
+        const actorId = actor.id
+        let actorHandle = actor.preferredUsername?.toString() ?? 'unknown'
+        if (actorId) {
+          actorHandle = `@${actorHandle}@${actorId.hostname}`
+        }
+
+        const originalContent = object.content ?? ''
+        const replyPrefixHtml = `<p>${actorHandle} replied:</p>`
+        const modifiedNote = new Note({
+          id: object.id,
+          content: replyPrefixHtml + originalContent,
+          replyTarget: object.replyTargetId,
+          published: object.published,
+        })
+
+        const convertedRecord = await postConverter.toRecord(
+          ctx,
+          postAuthorDid,
+          modifiedNote,
+        )
+
+        if (!convertedRecord) {
+          apLogger.warn(
+            { noteId: object.id?.href },
+            'failed to convert Note to record',
+          )
+          return
+        }
+
+        const postRecord = convertedRecord.value
+
+        const parentRecord = await appCtx.actorStore.read(
+          postAuthorDid,
+          async (store) => {
+            return store.record.getRecord(postAtUri, null)
+          },
+        )
+
+        if (!parentRecord) {
+          apLogger.warn({ postAtUri }, 'could not find parent post for reply')
+          return
+        }
+
+        const parentRef = {
+          uri: postAtUri.toString(),
+          cid: parentRecord.cid,
+        }
+
+        const parentValue = parentRecord.value as {
+          reply?: { root: { uri: string; cid: string } }
+        }
+        const rootRef = parentValue.reply?.root ?? parentRef
+
+        postRecord.reply = {
+          root: rootRef,
+          parent: parentRef,
+        }
+
+        // Create the post in the user's repo
+        const { prepareCreate } = await import('../repo')
+
+        const write = await prepareCreate({
+          did: postAuthorDid,
+          collection: 'app.bsky.feed.post',
+          record: postRecord,
+          validate: true,
+        })
+
+        const commit = await appCtx.actorStore.transact(
+          postAuthorDid,
+          async (actorTxn) => {
+            const commit = await actorTxn.repo.processWrites([write])
+            await appCtx.sequencer.sequenceCommit(postAuthorDid, commit)
+            return commit
+          },
+        )
+
+        await appCtx.accountManager.updateRepoRoot(
+          postAuthorDid,
+          commit.cid,
+          commit.rev,
+        )
+
+        apLogger.info(
+          {
+            postAuthorDid,
+            actorHandle,
+            noteId: object.id?.href,
+            postUri: write.uri.toString(),
+          },
+          'created reply post from ActivityPub',
+        )
+      } catch (err) {
+        apLogger.error(
+          { err, createId: create.id?.href },
+          'failed to process create activity',
         )
         throw err
       }
