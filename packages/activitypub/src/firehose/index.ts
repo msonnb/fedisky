@@ -1,0 +1,1 @@
+export { FirehoseProcessor } from './processor'
