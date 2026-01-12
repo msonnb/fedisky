@@ -3,6 +3,7 @@ import * as bsync from '@atproto/bsync'
 import { ExportableKeypair, Keypair } from '@atproto/crypto'
 import * as ozone from '@atproto/ozone'
 import * as pds from '@atproto/pds'
+import * as activitypub from '@msonnb/activitypub'
 
 export type IntrospectConfig = {
   port?: number
@@ -43,6 +44,11 @@ export type OzoneConfig = Partial<ozone.OzoneEnvironment> & {
   imgInvalidator?: ozone.ImageInvalidator
 }
 
+export type ActivitypubConfig = Partial<activitypub.ServerEnvironment> & {
+  pdsUrl: string
+  pdsAdminToken: string
+}
+
 export type TestServerParams = {
   dbPostgresUrl: string
   dbPostgresSchema: string
@@ -51,6 +57,7 @@ export type TestServerParams = {
   bsky: Partial<BskyConfig>
   ozone: Partial<OzoneConfig>
   introspect: Partial<IntrospectConfig>
+  activitypub: Partial<ActivitypubConfig>
 }
 
 export type DidAndKey = {

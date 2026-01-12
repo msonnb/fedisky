@@ -33,6 +33,11 @@ const run = async () => {
       dbMaterializedViewRefreshIntervalMs: 30_000,
     },
     introspect: { port: 2581 },
+    activitypub: {
+      port: 2588,
+      hostname: 'localhost',
+      firehoseEnabled: true,
+    },
   })
   mockMailer(network.pds)
   await generateMockSetup(network)
@@ -44,6 +49,9 @@ const run = async () => {
   }
   console.log(`👤 DID Placeholder server http://localhost:${network.plc.port}`)
   console.log(`🌞 Main PDS http://localhost:${network.pds.port}`)
+  console.log(
+    `🔗 ActivityPub federation service http://localhost:${network.activitypub.port}`,
+  )
   console.log(
     `🔨 Lexicon authority DID ${network.pds.ctx.cfg.lexicon.didAuthority}`,
   )
