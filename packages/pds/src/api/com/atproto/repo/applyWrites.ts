@@ -16,7 +16,6 @@ import { dbLogger } from '../../../../logger'
 import {
   BadCommitSwapError,
   InvalidRecordError,
-  PreparedCreate,
   PreparedWrite,
   prepareCreate,
   prepareDelete,
