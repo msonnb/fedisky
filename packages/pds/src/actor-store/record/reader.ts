@@ -120,62 +120,6 @@ export class RecordReader {
     })
   }
 
-  async listRecordsForCollections(opts: {
-    collections: string[]
-    limit: number
-    reverse: boolean
-    cursor?: string
-    rkeyStart?: string
-    rkeyEnd?: string
-    includeSoftDeleted?: boolean
-  }): Promise<{ uri: string; cid: string; value: Record<string, unknown> }[]> {
-    const {
-      collections,
-      limit,
-      reverse,
-      cursor,
-      rkeyStart,
-      rkeyEnd,
-      includeSoftDeleted = false,
-    } = opts
-
-    const { ref } = this.db.db.dynamic
-    let builder = this.db.db
-      .selectFrom('record')
-      .innerJoin('repo_block', 'repo_block.cid', 'record.cid')
-      .where('record.collection', 'in', collections)
-      .if(!includeSoftDeleted, (qb) =>
-        qb.where(notSoftDeletedClause(ref('record'))),
-      )
-      .orderBy('record.rkey', reverse ? 'asc' : 'desc')
-      .limit(limit)
-      .selectAll()
-
-    // prioritize cursor but fall back to soon-to-be-depcreated rkey start/end
-    if (cursor !== undefined) {
-      if (reverse) {
-        builder = builder.where('record.rkey', '>', cursor)
-      } else {
-        builder = builder.where('record.rkey', '<', cursor)
-      }
-    } else {
-      if (rkeyStart !== undefined) {
-        builder = builder.where('record.rkey', '>', rkeyStart)
-      }
-      if (rkeyEnd !== undefined) {
-        builder = builder.where('record.rkey', '<', rkeyEnd)
-      }
-    }
-    const res = await builder.execute()
-    return res.map((row) => {
-      return {
-        uri: row.uri,
-        cid: row.cid,
-        value: cborToLexRecord(row.content),
-      }
-    })
-  }
-
   async getRecord(
     uri: AtUri,
     cid: string | null,

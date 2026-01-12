@@ -30,9 +30,6 @@ import { loggerMiddleware } from './logger'
 import { proxyHandler } from './pipethrough'
 import compression from './util/compression'
 import * as wellKnown from './well-known'
-import * as activitypub from './activitypub'
-import { APOutbox } from './activitypub/outbox'
-import { ensureServiceAccount } from './service-account'
 
 export { createSecretKeyObject } from './auth-verifier'
 export * from './config'
@@ -165,7 +162,6 @@ export class PDS {
     app.use(basicRoutes.createRouter(ctx))
     app.use(wellKnown.createRouter(ctx))
     app.use(server.xrpc.router)
-    app.use(activitypub.createRouter(ctx))
     app.use(error.handler)
 
     return new PDS({
@@ -176,9 +172,6 @@ export class PDS {
 
   async start(): Promise<http.Server> {
     await this.ctx.sequencer.start()
-    await ensureServiceAccount(this.ctx)
-    const apOutbox = new APOutbox(this.ctx, this.ctx.sequencer)
-    apOutbox.start()
     const server = this.app.listen(this.ctx.cfg.service.port)
     this.server = server
     this.server.keepAliveTimeout = 90000

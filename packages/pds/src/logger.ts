@@ -16,7 +16,6 @@ export const httpLogger = subsystemLogger('pds')
 export const fetchLogger = subsystemLogger('pds:fetch')
 export const oauthLogger = subsystemLogger('pds:oauth')
 export const lexiconResolverLogger = subsystemLogger('pds:lexicon-resolver')
-export const apLogger = subsystemLogger('pds:activitypub')
 
 export const loggerMiddleware = pinoHttp({
   logger: httpLogger,

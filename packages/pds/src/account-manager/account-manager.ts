@@ -77,10 +77,6 @@ export class AccountManager {
     return account.getAccountByEmail(this.db, email, flags)
   }
 
-  async getAccountCount(flags?: account.AvailabilityFlags): Promise<number> {
-    return account.getAccountCount(this.db, flags)
-  }
-
   async isAccountActivated(did: string): Promise<boolean> {
     const account = await this.getAccount(did, { includeDeactivated: true })
     if (!account) return false
