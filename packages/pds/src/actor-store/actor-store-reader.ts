@@ -22,6 +22,7 @@ export class ActorStoreReader {
     this.repo = new RepoReader(db, blobstore)
     this.record = new RecordReader(db)
     this.pref = new PreferenceReader(db)
+
     // Invoke "keypair" once. Also avoids leaking "this" as keypair context.
     let keypairPromise: Promise<Keypair>
     this.keypair = () => (keypairPromise ??= Promise.resolve().then(keypair))
