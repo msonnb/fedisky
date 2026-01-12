@@ -21,7 +21,7 @@
     "dev": "../dev-infra/with-test-redis-and-db.sh node --enable-source-maps --watch dist/bin.js"
   },
   "engines": {
-    "node": ">=18.7.0"
+    "node": ">=22.0.0"
   },
   "dependencies": {
     "@atproto/api": "workspace:^",
@@ -38,6 +38,7 @@
     "@atproto/xrpc-server": "workspace:^",
     "@did-plc/lib": "^0.0.1",
     "@did-plc/server": "^0.0.1",
+    "@msonnb/activitypub": "workspace:^",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
     "get-port": "^5.1.1",

@@ -14,6 +14,7 @@ import { LexiconAuthorityProfile } from './service-profile-lexicon'
 import { OzoneServiceProfile } from './service-profile-ozone'
 import { TestServerParams } from './types'
 import { mockNetworkUtilities } from './util'
+import { TestActivitypub } from './activitypub'
 
 const ADMIN_USERNAME = 'admin'
 const ADMIN_PASSWORD = 'admin-pass'
@@ -22,6 +23,7 @@ export class TestNetwork extends TestNetworkNoAppView {
   constructor(
     public plc: TestPlc,
     public pds: TestPds,
+    public activitypub: TestActivitypub,
     public bsky: TestBsky,
     public ozone: TestOzone,
     public introspect?: IntrospectServer,
@@ -44,6 +46,7 @@ export class TestNetwork extends TestNetworkNoAppView {
     const bskyPort = params.bsky?.port ?? (await getPort())
     const pdsPort = params.pds?.port ?? (await getPort())
     const ozonePort = params.ozone?.port ?? (await getPort())
+    const activitypubPort = params.activitypub?.port ?? (await getPort())
 
     const thirdPartyPds = await TestPds.create({
       didPlcUrl: plc.url,
@@ -90,6 +93,13 @@ export class TestNetwork extends TestNetworkNoAppView {
       modServiceDid: ozoneServiceProfile.did,
       lexiconDidAuthority: lexiconAuthorityProfile.did,
       ...params.pds,
+    })
+
+    const activitypub = await TestActivitypub.create({
+      port: activitypubPort,
+      pdsUrl: pds.url,
+      pdsAdminToken: params.activitypub?.pdsAdminToken ?? 'admin-pass',
+      ...params.activitypub,
     })
 
     // mock before any events start flowing from pds so that we don't miss e.g. any handle resolutions.
@@ -146,7 +156,7 @@ export class TestNetwork extends TestNetworkNoAppView {
       )
     }
 
-    return new TestNetwork(plc, pds, bsky, ozone, introspect)
+    return new TestNetwork(plc, pds, activitypub, bsky, ozone, introspect)
   }
 
   async processFullSubscription(timeout = 5000) {
