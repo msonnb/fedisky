@@ -1,3 +1,15 @@
+import type {
+  Main as Post,
+  ReplyRef,
+} from '@atproto/api/dist/client/types/app/bsky/feed/post'
+import {
+  isMain as isEmbedImagesOriginal,
+  type Main as EmbedImages,
+} from '@atproto/api/dist/client/types/app/bsky/embed/images'
+import {
+  isMain as isEmbedVideoOriginal,
+  type Main as EmbedVideo,
+} from '@atproto/api/dist/client/types/app/bsky/embed/video'
 import { TID, dataToCborBlock } from '@atproto/common'
 import { BlobRef, lexToIpld } from '@atproto/lexicon'
 import { cborToLex } from '@atproto/repo'
@@ -24,53 +36,15 @@ import {
 import { extractLanguage, parseHtmlContent } from './util/html-parser'
 import { RecordConverter } from './registry'
 
-interface PostRecord {
-  $type?: string
-  text: string
-  createdAt: string
-  langs?: string[]
-  embed?: unknown
-  reply?: ReplyRef
-}
-
-interface ReplyRef {
-  root: { uri: string; cid: string }
-  parent: { uri: string; cid: string }
-}
-
-interface EmbedImages {
-  $type: 'app.bsky.embed.images'
-  images: Array<{
-    image: BlobRef | { original: unknown }
-    alt: string
-    aspectRatio?: { width: number; height: number }
-  }>
-}
-
-interface EmbedVideo {
-  $type: 'app.bsky.embed.video'
-  video: BlobRef | { original: unknown }
-  alt?: string
-  aspectRatio?: { width: number; height: number }
-}
-
 function isEmbedImages(embed: unknown): embed is EmbedImages {
-  return (
-    typeof embed === 'object' &&
-    embed !== null &&
-    (embed as EmbedImages).$type === 'app.bsky.embed.images'
-  )
+  return isEmbedImagesOriginal(embed)
 }
 
 function isEmbedVideo(embed: unknown): embed is EmbedVideo {
-  return (
-    typeof embed === 'object' &&
-    embed !== null &&
-    (embed as EmbedVideo).$type === 'app.bsky.embed.video'
-  )
+  return isEmbedVideoOriginal(embed)
 }
 
-export const postConverter: RecordConverter<PostRecord, Note> = {
+export const postConverter: RecordConverter<Post, Note> = {
   collection: 'app.bsky.feed.post',
   objectTypes: [Note],
 
@@ -156,7 +130,7 @@ export const postConverter: RecordConverter<PostRecord, Note> = {
         text = decoder.decode(bytes.slice(0, MAX_TEXT_BYTES - 3)) + '...'
       }
 
-      let embed: PostRecord['embed'] = undefined
+      let embed: Post['embed'] = undefined
       if (options?.uploadBlob) {
         const attachments = await extractAttachments(object)
         if (attachments.length > 0) {
@@ -182,7 +156,7 @@ export const postConverter: RecordConverter<PostRecord, Note> = {
         ? published.toString()
         : new Date().toISOString()
 
-      const record: PostRecord = {
+      const record: Post = {
         $type: 'app.bsky.feed.post',
         text,
         createdAt,
@@ -190,6 +164,9 @@ export const postConverter: RecordConverter<PostRecord, Note> = {
 
       if (parsed.langs.length > 0) {
         record.langs = parsed.langs
+      }
+      if (parsed.facets.length > 0) {
+        record.facets = parsed.facets
       }
       if (embed) {
         record.embed = embed
@@ -223,7 +200,7 @@ export const postConverter: RecordConverter<PostRecord, Note> = {
   },
 }
 
-async function computeRecordCid(record: PostRecord) {
+async function computeRecordCid(record: Post) {
   const block = await dataToCborBlock(lexToIpld(record))
   cborToLex(block.bytes)
   return block.cid
@@ -251,7 +228,7 @@ async function extractAttachments(note: Note): Promise<AttachmentInfo[]> {
 
 function buildEmbedFromBlobs(
   blobs: DownloadedBlob[],
-): PostRecord['embed'] | undefined {
+): Post['embed'] | undefined {
   if (blobs.length === 0) {
     return undefined
   }
