@@ -170,13 +170,20 @@ export function setupInboxListeners(ctx: AppContext) {
         }
 
         const actorId = actor.id
-        let actorHandle = actor.preferredUsername?.toString() ?? 'unknown'
+        const actorUsername = actor.preferredUsername?.toString() ?? 'unknown'
+        let actorHandle = actorUsername
+        let actorProfileUrl: string | undefined
         if (actorId) {
-          actorHandle = `@${actorHandle}@${actorId.hostname}`
+          actorHandle = `@${actorUsername}@${actorId.hostname}`
+          actorProfileUrl = `${actorId.origin}/@${actorUsername}`
         }
 
+        // Build attribution prefix as HTML with a link to the author's profile
         const originalContent = object.content ?? ''
-        const replyPrefixHtml = `<p>${actorHandle} replied:</p>`
+        const actorLink = actorProfileUrl
+          ? `<a href="${actorProfileUrl}">${actorHandle}</a>`
+          : actorHandle
+        const replyPrefixHtml = `<p>${actorLink} replied:</p>`
         const modifiedNote = new Note({
           id: object.id,
           content: replyPrefixHtml + originalContent,
@@ -203,14 +210,7 @@ export function setupInboxListeners(ctx: AppContext) {
           return
         }
 
-        const postRecord = convertedRecord.value as {
-          text: string
-          createdAt: string
-          reply?: {
-            root: { uri: string; cid: string }
-            parent: { uri: string; cid: string }
-          }
-        }
+        const postRecord = convertedRecord.value
 
         const parentRecord = await ctx.pdsClient.getRecord(
           postAuthorDid,
