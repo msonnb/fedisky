@@ -1,6 +1,7 @@
 import { WebSocket } from 'ws'
 import { AtUri } from '@atproto/syntax'
 import { cborDecodeMulti } from '@atproto/common'
+import { Context, Delete, Note, PUBLIC_COLLECTION } from '@fedify/fedify'
 import { AppContext } from '../context'
 import { recordConverterRegistry } from '../federation'
 import { apLogger } from '../logger'
@@ -165,8 +166,6 @@ export class FirehoseProcessor {
     }
 
     for (const op of event.ops) {
-      if (op.action !== 'create') continue
-
       const collection = op.path.split('/')[0]
       const recordConverter = recordConverterRegistry.get(collection)
       if (!recordConverter) {
@@ -183,61 +182,129 @@ export class FirehoseProcessor {
         new URL(this.ctx.cfg.service.publicUrl),
       )
 
-      try {
-        const record = await this.ctx.pdsClient.getRecord(
-          did,
-          collection,
-          new AtUri(uri).rkey,
-        )
-
-        if (!record) {
-          apLogger.debug({ did, uri }, 'skipping event: record not found')
-          continue
-        }
-
-        const conversionResult = await recordConverter.toActivityPub(
+      if (op.action === 'create') {
+        await this.processCreate(
           fedifyContext,
           did,
-          record,
-          this.ctx.pdsClient,
+          uri,
+          collection,
+          recordConverter,
         )
+      } else if (op.action === 'delete') {
+        await this.processDelete(fedifyContext, did, uri)
+      }
+    }
+  }
 
-        if (!conversionResult?.activity) {
-          apLogger.debug(
-            { did, uri },
-            'skipping event: conversion returned null or no activity',
-          )
-          continue
-        }
+  private async processCreate(
+    fedifyContext: Context<void>,
+    did: string,
+    uri: string,
+    collection: string,
+    recordConverter: ReturnType<typeof recordConverterRegistry.get>,
+  ) {
+    if (!recordConverter) return
 
-        const activity = conversionResult.activity
+    try {
+      const record = await this.ctx.pdsClient.getRecord(
+        did,
+        collection,
+        new AtUri(uri).rkey,
+      )
 
-        try {
-          await fedifyContext.sendActivity(
-            { identifier: did },
-            'followers',
-            activity,
-          )
-          apLogger.info(
-            {
-              did,
-              uri,
-              activityId: activity.id?.href,
-            },
-            'sent activity to followers',
-          )
-        } catch (sendErr) {
-          apLogger.warn(
-            { did, uri, activityId: activity.id?.href, err: sendErr },
-            'failed to send activity to followers',
-          )
-        }
-      } catch (err) {
+      if (!record) {
+        apLogger.debug({ did, uri }, 'skipping event: record not found')
+        return
+      }
+
+      const conversionResult = await recordConverter.toActivityPub(
+        fedifyContext,
+        did,
+        record,
+        this.ctx.pdsClient,
+      )
+
+      if (!conversionResult?.activity) {
+        apLogger.debug(
+          { did, uri },
+          'skipping event: conversion returned null or no activity',
+        )
+        return
+      }
+
+      const activity = conversionResult.activity
+
+      try {
+        await fedifyContext.sendActivity(
+          { identifier: did },
+          'followers',
+          activity,
+        )
+        apLogger.info(
+          {
+            did,
+            uri,
+            activityId: activity.id?.href,
+          },
+          'sent activity to followers',
+        )
+      } catch (sendErr) {
         apLogger.warn(
-          { did, uri, err },
-          'failed to process commit for AP delivery',
+          { did, uri, activityId: activity.id?.href, err: sendErr },
+          'failed to send activity to followers',
         )
       }
+    } catch (err) {
+      apLogger.warn(
+        { did, uri, err },
+        'failed to process commit for AP delivery',
+      )
+    }
+  }
+
+  private async processDelete(
+    fedifyContext: Context<void>,
+    did: string,
+    uri: string,
+  ) {
+    try {
+      const actor = fedifyContext.getActorUri(did)
+      const objectUri = fedifyContext.getObjectUri(Note, { uri })
+      const followersUri = fedifyContext.getFollowersUri(did)
+
+      const deleteActivity = new Delete({
+        id: new URL(`#delete-${Date.now()}`, objectUri),
+        actor,
+        to: PUBLIC_COLLECTION,
+        cc: followersUri,
+        object: objectUri,
+      })
+
+      try {
+        await fedifyContext.sendActivity(
+          { identifier: did },
+          'followers',
+          deleteActivity,
+        )
+        apLogger.info(
+          {
+            did,
+            uri,
+            activityId: deleteActivity.id?.href,
+          },
+          'sent delete activity to followers',
+        )
+      } catch (sendErr) {
+        apLogger.warn(
+          { did, uri, activityId: deleteActivity.id?.href, err: sendErr },
+          'failed to send delete activity to followers',
+        )
+      }
+    } catch (err) {
+      apLogger.warn(
+        { did, uri, err },
+        'failed to process delete for AP delivery',
+      )
     }
   }
 
