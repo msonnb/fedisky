@@ -1,6 +1,2 @@
-packages:
-  - 'services/*'
-  - 'packages/*'
-  - 'packages/lex/*'
-  - 'packages/oauth/*'
-  - 'packages/internal/*'
+onlyBuiltDependencies:
+  - better-sqlite3

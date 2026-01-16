@@ -2,9 +2,8 @@ node_modules
 lerna-debug.log
 npm-debug.log
 yarn-error.log
-packages/**/dist
+dist
 .idea
-packages/*/coverage
 test.sqlite
 .DS_Store
 *.log
