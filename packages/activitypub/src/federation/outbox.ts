@@ -72,6 +72,7 @@ export function setupOutboxDispatcher(ctx: AppContext) {
                   identifier,
                   record,
                   ctx.pdsClient,
+                  { db: ctx.db },
                 )
 
                 if (!conversionResult || !conversionResult.activity) {
@@ -161,6 +162,7 @@ export function setupOutboxDispatcher(ctx: AppContext) {
           identifier,
           record,
           ctx.pdsClient,
+          { db: ctx.db },
         )
 
         if (!conversionResult) {

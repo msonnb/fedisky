@@ -1,6 +1,7 @@
 import type { Activity, Object as APObject, Context } from '@fedify/fedify'
 import { BlobRef } from '@atproto/api'
 import { PDSClient } from '../pds-client'
+import type { APDatabase } from '../db'
 
 export type BlobUploader = (
   data: Uint8Array,
@@ -10,6 +11,10 @@ export type BlobUploader = (
 export interface ToRecordContext {
   pdsClient?: PDSClient
   uploadBlob?: BlobUploader
+}
+
+export interface ToActivityPubContext {
+  db?: APDatabase
 }
 
 export interface RecordConverter<
@@ -23,6 +28,7 @@ export interface RecordConverter<
     identifier: string,
     record: { uri: string; cid: string; value: T },
     pdsClient: PDSClient,
+    options?: ToActivityPubContext,
   ): Promise<{ object: TObject; activity?: Activity } | null>
 
   toRecord(

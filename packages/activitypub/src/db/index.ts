@@ -1,6 +1,12 @@
 import Database from 'better-sqlite3'
 import { Kysely, SqliteDialect, Migrator, Migration } from 'kysely'
-import { DatabaseSchema, follow, keyPair, bridgeAccount } from './schema'
+import {
+  DatabaseSchema,
+  follow,
+  keyPair,
+  bridgeAccount,
+  postMapping,
+} from './schema'
 import migrations from './migrations'
 
 export type { DatabaseSchema } from './schema'
@@ -195,5 +201,43 @@ export class APDatabase {
 
   async deleteBridgeAccount(): Promise<void> {
     await this.db.deleteFrom('ap_bridge_account').where('id', '=', 1).execute()
+  }
+
+  async createPostMapping(
+    data: postMapping.APPostMapping,
+  ): Promise<postMapping.APPostMapping> {
+    await this.db
+      .insertInto('ap_post_mapping')
+      .values(data)
+      .onConflict((oc) => oc.doNothing())
+      .execute()
+    return data
+  }
+
+  async getPostMapping(
+    atUri: string,
+  ): Promise<postMapping.APPostMapping | undefined> {
+    return this.db
+      .selectFrom('ap_post_mapping')
+      .selectAll()
+      .where('atUri', '=', atUri)
+      .executeTakeFirst()
+  }
+
+  async getPostMappingByApNoteId(
+    apNoteId: string,
+  ): Promise<postMapping.APPostMapping | undefined> {
+    return this.db
+      .selectFrom('ap_post_mapping')
+      .selectAll()
+      .where('apNoteId', '=', apNoteId)
+      .executeTakeFirst()
+  }
+
+  async deletePostMapping(atUri: string): Promise<void> {
+    await this.db
+      .deleteFrom('ap_post_mapping')
+      .where('atUri', '=', atUri)
+      .execute()
   }
 }

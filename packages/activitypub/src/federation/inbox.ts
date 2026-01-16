@@ -246,6 +246,25 @@ export function setupInboxListeners(ctx: AppContext) {
           postRecord,
         )
 
+        const actorInboxId = actor.inboxId
+        if (object.id && actorId && actorInboxId) {
+          await ctx.db.createPostMapping({
+            atUri: result.uri,
+            apNoteId: object.id.href,
+            apActorId: actorId.href,
+            apActorInbox: actorInboxId.href,
+            createdAt: new Date().toISOString(),
+          })
+          apLogger.debug(
+            {
+              atUri: result.uri,
+              apNoteId: object.id.href,
+              apActorId: actorId.href,
+            },
+            'stored post mapping for bridge post',
+          )
+        }
+
         apLogger.info(
           {
             bridgeAccountDid: ctx.bridgeAccount.did,

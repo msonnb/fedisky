@@ -222,6 +222,7 @@ export class FirehoseProcessor {
         did,
         record,
         this.ctx.pdsClient,
+        { db: this.ctx.db },
       )
 
       if (!conversionResult?.activity) {
@@ -233,6 +234,20 @@ export class FirehoseProcessor {
       }
 
       const activity = conversionResult.activity
+
+      // Check if this is a reply to a bridge post - if so, also send to the original author
+      const recordValue = record.value as {
+        reply?: { parent?: { uri: string } }
+      }
+      let originalAuthorInbox: string | undefined
+      if (recordValue.reply?.parent?.uri) {
+        const mapping = await this.ctx.db.getPostMapping(
+          recordValue.reply.parent.uri,
+        )
+        if (mapping) {
+          originalAuthorInbox = mapping.apActorInbox
+        }
+      }
 
       try {
         await fedifyContext.sendActivity(
@@ -253,6 +268,45 @@ export class FirehoseProcessor {
           { did, uri, activityId: activity.id?.href, err: sendErr },
           'failed to send activity to followers',
         )
+      }
+
+      // Send to original AP author's inbox if this is a reply to a bridge post
+      if (originalAuthorInbox) {
+        const mapping = await this.ctx.db.getPostMapping(
+          recordValue.reply!.parent!.uri,
+        )
+        if (mapping) {
+          try {
+            await fedifyContext.sendActivity(
+              { identifier: did },
+              {
+                id: new URL(mapping.apActorId),
+                inboxId: new URL(mapping.apActorInbox),
+              },
+              activity,
+            )
+            apLogger.info(
+              {
+                did,
+                uri,
+                activityId: activity.id?.href,
+                originalAuthorInbox,
+              },
+              'sent reply activity to original AP author',
+            )
+          } catch (sendErr) {
+            apLogger.warn(
+              {
+                did,
+                uri,
+                activityId: activity.id?.href,
+                originalAuthorInbox,
+                err: sendErr,
+              },
+              'failed to send reply activity to original AP author',
+            )
+          }
+        }
       }
     } catch (err) {
       apLogger.warn(

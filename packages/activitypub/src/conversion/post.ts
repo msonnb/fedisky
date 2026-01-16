@@ -48,15 +48,24 @@ export const postConverter: RecordConverter<Post, Note> = {
   collection: 'app.bsky.feed.post',
   objectTypes: [Note],
 
-  async toActivityPub(ctx, identifier, record, pdsClient: PDSClient) {
+  async toActivityPub(ctx, identifier, record, pdsClient, options) {
     const post = record.value
     const apUri = ctx.getObjectUri(Note, { uri: record.uri })
     const to = PUBLIC_COLLECTION
     const cc = ctx.getFollowersUri(identifier)
     const actor = ctx.getActorUri(identifier)
-    const replyTarget = post.reply?.parent
-      ? ctx.getObjectUri(Note, { uri: post.reply.parent.uri })
-      : undefined
+
+    let replyTarget: URL | undefined
+    if (post.reply?.parent) {
+      const mapping = await options?.db?.getPostMapping(post.reply.parent.uri)
+      if (mapping) {
+        // Use the original AP note ID instead of our local object URI
+        replyTarget = new URL(mapping.apNoteId)
+      } else {
+        replyTarget = ctx.getObjectUri(Note, { uri: post.reply.parent.uri })
+      }
+    }
+
     const content = plainTextToHtml(post.text)
     const contents: Array<string | LanguageString> = [content]
     contents.concat(

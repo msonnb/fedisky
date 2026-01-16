@@ -123,4 +123,78 @@ describe('APDatabase', () => {
       expect(keypairs).toHaveLength(2)
     })
   })
+
+  describe('post mappings', () => {
+    it('should create and retrieve a post mapping by AT URI', async () => {
+      const mapping = {
+        atUri: 'at://did:plc:bridge/app.bsky.feed.post/abc123',
+        apNoteId: 'https://mastodon.social/users/alice/statuses/123456',
+        apActorId: 'https://mastodon.social/users/alice',
+        apActorInbox: 'https://mastodon.social/users/alice/inbox',
+        createdAt: new Date().toISOString(),
+      }
+
+      await db.createPostMapping(mapping)
+
+      const retrieved = await db.getPostMapping(mapping.atUri)
+      expect(retrieved).toBeDefined()
+      expect(retrieved?.apNoteId).toBe(mapping.apNoteId)
+      expect(retrieved?.apActorId).toBe(mapping.apActorId)
+      expect(retrieved?.apActorInbox).toBe(mapping.apActorInbox)
+    })
+
+    it('should retrieve a post mapping by AP note ID', async () => {
+      const mapping = {
+        atUri: 'at://did:plc:bridge/app.bsky.feed.post/abc123',
+        apNoteId: 'https://mastodon.social/users/alice/statuses/123456',
+        apActorId: 'https://mastodon.social/users/alice',
+        apActorInbox: 'https://mastodon.social/users/alice/inbox',
+        createdAt: new Date().toISOString(),
+      }
+
+      await db.createPostMapping(mapping)
+
+      const retrieved = await db.getPostMappingByApNoteId(mapping.apNoteId)
+      expect(retrieved).toBeDefined()
+      expect(retrieved?.atUri).toBe(mapping.atUri)
+    })
+
+    it('should return undefined for non-existent mapping', async () => {
+      const retrieved = await db.getPostMapping('at://nonexistent/post/123')
+      expect(retrieved).toBeUndefined()
+    })
+
+    it('should delete a post mapping', async () => {
+      const mapping = {
+        atUri: 'at://did:plc:bridge/app.bsky.feed.post/abc123',
+        apNoteId: 'https://mastodon.social/users/alice/statuses/123456',
+        apActorId: 'https://mastodon.social/users/alice',
+        apActorInbox: 'https://mastodon.social/users/alice/inbox',
+        createdAt: new Date().toISOString(),
+      }
+
+      await db.createPostMapping(mapping)
+      await db.deletePostMapping(mapping.atUri)
+
+      const retrieved = await db.getPostMapping(mapping.atUri)
+      expect(retrieved).toBeUndefined()
+    })
+
+    it('should handle duplicate inserts gracefully (upsert behavior)', async () => {
+      const mapping = {
+        atUri: 'at://did:plc:bridge/app.bsky.feed.post/abc123',
+        apNoteId: 'https://mastodon.social/users/alice/statuses/123456',
+        apActorId: 'https://mastodon.social/users/alice',
+        apActorInbox: 'https://mastodon.social/users/alice/inbox',
+        createdAt: new Date().toISOString(),
+      }
+
+      await db.createPostMapping(mapping)
+      // Should not throw on duplicate
+      await db.createPostMapping(mapping)
+
+      const retrieved = await db.getPostMapping(mapping.atUri)
+      expect(retrieved).toBeDefined()
+    })
+  })
 })
