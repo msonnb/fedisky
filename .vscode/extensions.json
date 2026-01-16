@@ -1,9 +1,0 @@
-{
-  "recommendations": [
-    "dbaeumer.vscode-eslint",
-    "wengerk.highlight-bad-chars",
-    "esbenp.prettier-vscode",
-    "streetsidesoftware.code-spell-checker",
-    "vitest.explorer"
-  ]
-}
