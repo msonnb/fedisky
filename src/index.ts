@@ -1,7 +1,6 @@
+import http from 'node:http'
 import express from 'express'
 import { createHttpTerminator, HttpTerminator } from 'http-terminator'
-import http from 'node:http'
-
 import { APFederationConfig } from './config'
 import { AppContext } from './context'
 import { createRouter } from './federation'
@@ -50,7 +49,7 @@ export class APFederationService {
       next()
     })
 
-    app.get('/health', (req, res) => {
+    app.get('/health', (_req, res) => {
       res.json({ status: 'ok' })
     })
 
@@ -62,7 +61,7 @@ export class APFederationService {
         err: Error,
         req: express.Request,
         res: express.Response,
-        next: express.NextFunction,
+        _next: express.NextFunction,
       ) => {
         logger.error({ err, path: req.path }, 'unhandled error')
         res.status(500).json({ error: 'Internal server error' })

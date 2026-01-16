@@ -1,8 +1,8 @@
-import { Note } from '@fedify/fedify'
 import { AtUri } from '@atproto/syntax'
+import { Note } from '@fedify/fedify'
 import { AppContext } from '../context'
-import { apLogger } from '../logger'
 import { RecordConverterRegistry, postConverter } from '../conversion'
+import { apLogger } from '../logger'
 
 export const recordConverterRegistry = new RecordConverterRegistry()
 recordConverterRegistry.register(postConverter)

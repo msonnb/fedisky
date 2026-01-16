@@ -1,17 +1,17 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { createFederation, createInboxContext } from '@fedify/testing'
 import { Accept, Create, Follow, Note, Person, Undo } from '@fedify/fedify'
 import type { InboxContext } from '@fedify/fedify'
+import { createFederation, createInboxContext } from '@fedify/testing'
 import { Temporal } from '@js-temporal/polyfill'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { AppContext } from '../../src/context'
+import type { APDatabase } from '../../src/db'
+import { setupInboxListeners } from '../../src/federation/inbox'
 import {
   createTestDb,
   createMockPdsClient,
   createMockBridgeAccount,
   testData,
 } from '../_setup'
-import { setupInboxListeners } from '../../src/federation/inbox'
-import type { APDatabase } from '../../src/db'
-import type { AppContext } from '../../src/context'
 
 function createTestFederation() {
   return createFederation<void>({

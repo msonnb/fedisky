@@ -1,8 +1,8 @@
-import { Accept, Create, Follow, Note, Undo } from '@fedify/fedify'
 import { AtUri } from '@atproto/syntax'
+import { Accept, Create, Follow, Note, Undo } from '@fedify/fedify'
 import { AppContext } from '../context'
-import { apLogger } from '../logger'
 import { postConverter } from '../conversion'
+import { apLogger } from '../logger'
 
 export function setupInboxListeners(ctx: AppContext) {
   ctx.federation

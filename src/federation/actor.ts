@@ -1,3 +1,4 @@
+import { BlobRef } from '@atproto/lexicon'
 import {
   exportJwk,
   generateCryptoKeyPair,
@@ -7,7 +8,6 @@ import {
 } from '@fedify/fedify'
 import { AppContext } from '../context'
 import { apLogger } from '../logger'
-import { BlobRef } from '@atproto/lexicon'
 
 export function setupActorDispatcher(ctx: AppContext) {
   ctx.federation

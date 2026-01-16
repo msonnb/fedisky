@@ -1,6 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { createFederation } from '@fedify/testing'
 import { Delete, Note, PUBLIC_COLLECTION } from '@fedify/fedify'
+import { createFederation } from '@fedify/testing'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import type { AppContext } from '../../src/context'
+import type { APDatabase } from '../../src/db'
 import { FirehoseProcessor } from '../../src/firehose/processor'
 import {
   createTestDb,
@@ -8,8 +10,6 @@ import {
   createMockBridgeAccount,
   testData,
 } from '../_setup'
-import type { APDatabase } from '../../src/db'
-import type { AppContext } from '../../src/context'
 
 describe('FirehoseProcessor', () => {
   let db: APDatabase

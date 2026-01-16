@@ -1,6 +1,6 @@
+import { RichText, Facet } from '@atproto/api'
 import { LanguageString } from '@fedify/fedify'
 import { convert, type DomNode } from 'html-to-text'
-import { RichText, Facet } from '@atproto/api'
 
 export interface ParsedContent {
   text: string

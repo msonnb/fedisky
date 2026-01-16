@@ -1,7 +1,3 @@
-import type {
-  Main as Post,
-  ReplyRef,
-} from '@atproto/api/dist/client/types/app/bsky/feed/post'
 import {
   isMain as isEmbedImagesOriginal,
   type Main as EmbedImages,
@@ -10,6 +6,10 @@ import {
   isMain as isEmbedVideoOriginal,
   type Main as EmbedVideo,
 } from '@atproto/api/dist/client/types/app/bsky/embed/video'
+import type {
+  Main as Post,
+  ReplyRef,
+} from '@atproto/api/dist/client/types/app/bsky/feed/post'
 import { TID, dataToCborBlock } from '@atproto/common'
 import { BlobRef, lexToIpld } from '@atproto/lexicon'
 import { cborToLex } from '@atproto/repo'
@@ -23,9 +23,9 @@ import {
   PUBLIC_COLLECTION,
 } from '@fedify/fedify'
 import { Temporal } from '@js-temporal/polyfill'
-
-import { PDSClient } from '../pds-client'
 import { apLogger } from '../logger'
+import { PDSClient } from '../pds-client'
+import { RecordConverter } from './registry'
 import {
   downloadAttachments,
   isImageMimeType,
@@ -34,7 +34,6 @@ import {
   type DownloadedBlob,
 } from './util/blob-handler'
 import { extractLanguage, parseHtmlContent } from './util/html-parser'
-import { RecordConverter } from './registry'
 
 function isEmbedImages(embed: unknown): embed is EmbedImages {
   return isEmbedImagesOriginal(embed)
