@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createFederation } from '@fedify/testing'
 import { Delete, Note, PUBLIC_COLLECTION } from '@fedify/fedify'
 import { FirehoseProcessor } from '../../src/firehose/processor'
@@ -31,7 +32,7 @@ describe('FirehoseProcessor', () => {
       federation.setObjectDispatcher(Note, '/posts/{uri}', () => null)
 
       const pdsClient = createMockPdsClient({
-        getRecord: jest.fn().mockResolvedValue({
+        getRecord: vi.fn().mockResolvedValue({
           uri: testData.posts.simple.uri,
           cid: testData.posts.simple.cid,
           value: testData.posts.simple.value,
@@ -39,7 +40,7 @@ describe('FirehoseProcessor', () => {
       })
 
       const bridgeAccount = createMockBridgeAccount({
-        isAvailable: jest.fn().mockReturnValue(true),
+        isAvailable: vi.fn().mockReturnValue(true),
         _did: 'did:plc:bridge',
       })
 
@@ -95,7 +96,7 @@ describe('FirehoseProcessor', () => {
 
       const bridgeDid = 'did:plc:bridge'
       const bridgeAccount = createMockBridgeAccount({
-        isAvailable: jest.fn().mockReturnValue(true),
+        isAvailable: vi.fn().mockReturnValue(true),
         _did: bridgeDid,
       })
 
@@ -145,7 +146,7 @@ describe('FirehoseProcessor', () => {
       const pdsClient = createMockPdsClient()
 
       const bridgeAccount = createMockBridgeAccount({
-        isAvailable: jest.fn().mockReturnValue(true),
+        isAvailable: vi.fn().mockReturnValue(true),
         _did: 'did:plc:bridge',
       })
 
@@ -195,7 +196,7 @@ describe('FirehoseProcessor', () => {
       const pdsClient = createMockPdsClient()
 
       const bridgeAccount = createMockBridgeAccount({
-        isAvailable: jest.fn().mockReturnValue(true),
+        isAvailable: vi.fn().mockReturnValue(true),
         _did: 'did:plc:bridge',
       })
 
@@ -244,7 +245,7 @@ describe('FirehoseProcessor', () => {
       const pdsClient = createMockPdsClient()
 
       const bridgeAccount = createMockBridgeAccount({
-        isAvailable: jest.fn().mockReturnValue(true),
+        isAvailable: vi.fn().mockReturnValue(true),
         _did: 'did:plc:bridge',
       })
 
@@ -298,7 +299,7 @@ describe('FirehoseProcessor', () => {
       const pdsClient = createMockPdsClient()
 
       const bridgeAccount = createMockBridgeAccount({
-        isAvailable: jest.fn().mockReturnValue(true),
+        isAvailable: vi.fn().mockReturnValue(true),
         _did: 'did:plc:bridge',
       })
 
@@ -355,7 +356,7 @@ describe('FirehoseProcessor', () => {
       const pdsClient = createMockPdsClient()
 
       const bridgeAccount = createMockBridgeAccount({
-        isAvailable: jest.fn().mockReturnValue(true),
+        isAvailable: vi.fn().mockReturnValue(true),
         _did: 'did:plc:bridge',
       })
 
@@ -403,7 +404,7 @@ describe('FirehoseProcessor', () => {
       const pdsClient = createMockPdsClient()
 
       const bridgeAccount = createMockBridgeAccount({
-        isAvailable: jest.fn().mockReturnValue(true),
+        isAvailable: vi.fn().mockReturnValue(true),
         _did: bridgeDid,
       })
 

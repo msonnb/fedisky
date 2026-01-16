@@ -1,13 +1,15 @@
+import { describe, it, expect } from 'vitest'
 import {
   parseHtmlContent,
   extractLanguage,
 } from '../src/conversion/util/html-parser'
 import { postConverter } from '../src/conversion/post'
 import { createFederation } from '@fedify/testing'
-import { LanguageString, Note, Document } from '@fedify/fedify'
+import { LanguageString, Note, Document, type Context } from '@fedify/fedify'
 import { Temporal } from '@js-temporal/polyfill'
 import { createMockPdsClient, createTestDb, testData } from './_setup'
 import type { Main as Post } from '@atproto/api/dist/client/types/app/bsky/feed/post'
+import type { PDSClient } from '../src/pds-client'
 
 describe('html-parser', () => {
   describe('parseHtmlContent', () => {
@@ -107,10 +109,10 @@ describe('postConverter', () => {
       }
 
       const result = await postConverter.toActivityPub(
-        ctx,
+        ctx as unknown as Context<void>,
         testData.users.alice.did,
         record,
-        pdsClient,
+        pdsClient as unknown as PDSClient,
       )
 
       expect(result).toBeDefined()
@@ -141,10 +143,10 @@ describe('postConverter', () => {
       }
 
       const result = await postConverter.toActivityPub(
-        ctx,
+        ctx as unknown as Context<void>,
         testData.users.alice.did,
         record,
-        pdsClient,
+        pdsClient as unknown as PDSClient,
       )
 
       expect(result).toBeDefined()
@@ -178,10 +180,10 @@ describe('postConverter', () => {
       }
 
       const result = await postConverter.toActivityPub(
-        ctx,
-        testData.users.bob.did,
+        ctx as unknown as Context<void>,
+        testData.users.alice.did,
         record,
-        pdsClient,
+        pdsClient as unknown as PDSClient,
       )
 
       expect(result).toBeDefined()
@@ -227,10 +229,10 @@ describe('postConverter', () => {
       }
 
       const result = await postConverter.toActivityPub(
-        ctx,
+        ctx as unknown as Context<void>,
         testData.users.bob.did,
         replyRecord,
-        pdsClient,
+        pdsClient as unknown as PDSClient,
         { db },
       )
 
@@ -262,10 +264,10 @@ describe('postConverter', () => {
       }
 
       const result = await postConverter.toActivityPub(
-        ctx,
+        ctx as unknown as Context<void>,
         testData.users.bob.did,
         record,
-        pdsClient,
+        pdsClient as unknown as PDSClient,
         { db },
       )
 
@@ -294,7 +296,7 @@ describe('postConverter', () => {
       })
 
       const result = await postConverter.toRecord(
-        ctx,
+        ctx as unknown as Context<void>,
         testData.users.alice.did,
         note,
       )
@@ -317,7 +319,7 @@ describe('postConverter', () => {
       })
 
       const result = await postConverter.toRecord(
-        ctx,
+        ctx as unknown as Context<void>,
         testData.users.alice.did,
         note,
       )
@@ -341,7 +343,7 @@ describe('postConverter', () => {
       })
 
       const result = await postConverter.toRecord(
-        ctx,
+        ctx as unknown as Context<void>,
         testData.users.alice.did,
         note,
       )
@@ -367,7 +369,7 @@ describe('postConverter', () => {
       })
 
       const result = await postConverter.toRecord(
-        ctx,
+        ctx as unknown as Context<void>,
         testData.users.alice.did,
         note,
       )

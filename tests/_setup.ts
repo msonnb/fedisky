@@ -1,3 +1,4 @@
+import { vi, type Mock } from 'vitest'
 import { APDatabase } from '../src/db'
 import type { PDSClient } from '../src/pds-client'
 import type { BridgeAccountManager } from '../src/bridge-account'
@@ -10,44 +11,44 @@ export async function createTestDb(): Promise<APDatabase> {
 
 export function createMockPdsClient(
   overrides: Partial<PDSClient> = {},
-): jest.Mocked<PDSClient> {
+): PDSClient {
   return {
-    getAccount: jest.fn().mockResolvedValue(null),
-    getAccounts: jest.fn().mockResolvedValue([]),
-    getAccountCount: jest.fn().mockResolvedValue(0),
-    getRecord: jest.fn().mockResolvedValue(null),
-    listRecords: jest.fn().mockResolvedValue({ records: [] }),
-    createRecord: jest
+    getAccount: vi.fn().mockResolvedValue(null),
+    getAccounts: vi.fn().mockResolvedValue([]),
+    getAccountCount: vi.fn().mockResolvedValue(0),
+    getRecord: vi.fn().mockResolvedValue(null),
+    listRecords: vi.fn().mockResolvedValue({ records: [] }),
+    createRecord: vi
       .fn()
       .mockResolvedValue({ uri: 'at://test/test/test', cid: 'bafytest' }),
-    getProfile: jest.fn().mockResolvedValue(null),
-    resolveHandle: jest.fn().mockResolvedValue(null),
-    createInviteCode: jest.fn().mockResolvedValue('test-invite-code'),
-    createAccount: jest.fn().mockResolvedValue({
+    getProfile: vi.fn().mockResolvedValue(null),
+    resolveHandle: vi.fn().mockResolvedValue(null),
+    createInviteCode: vi.fn().mockResolvedValue('test-invite-code'),
+    createAccount: vi.fn().mockResolvedValue({
       did: 'did:plc:test',
       handle: 'test.handle',
       accessJwt: 'test-access-jwt',
       refreshJwt: 'test-refresh-jwt',
     }),
-    createSession: jest.fn().mockResolvedValue({
+    createSession: vi.fn().mockResolvedValue({
       accessJwt: 'test-access-jwt',
       refreshJwt: 'test-refresh-jwt',
     }),
-    refreshSession: jest.fn().mockResolvedValue({
+    refreshSession: vi.fn().mockResolvedValue({
       accessJwt: 'new-access-jwt',
       refreshJwt: 'new-refresh-jwt',
     }),
-    createAuthenticatedAgent: jest.fn(),
-    getBlobUrl: jest.fn(
+    createAuthenticatedAgent: vi.fn(),
+    getBlobUrl: vi.fn(
       (did: string, cid: string) =>
         `https://pds.example/xrpc/com.atproto.sync.getBlob?did=${did}&cid=${cid}`,
     ),
-    getImageUrl: jest.fn(
+    getImageUrl: vi.fn(
       (did: string, cid: string) =>
         `https://pds.example/xrpc/com.atproto.sync.getBlob?did=${did}&cid=${cid}`,
     ),
     ...overrides,
-  } as jest.Mocked<PDSClient>
+  } as unknown as PDSClient
 }
 
 /**
@@ -58,33 +59,33 @@ export function createMockBridgeAccount(
     _did?: string
     _handle?: string
   } = {},
-): jest.Mocked<BridgeAccountManager> {
+): { [K in keyof BridgeAccountManager]: Mock } & { did: string; handle: string } {
   const {
     _did = 'did:plc:bridge',
     _handle = 'bridge.test',
     ...rest
   } = overrides
   return {
-    isAvailable: jest.fn().mockReturnValue(true),
+    isAvailable: vi.fn().mockReturnValue(true),
     get did() {
       return _did
     },
     get handle() {
       return _handle
     },
-    initialize: jest.fn().mockResolvedValue(undefined),
-    getAgent: jest.fn().mockResolvedValue({}),
-    createRecord: jest.fn().mockResolvedValue({
+    initialize: vi.fn().mockResolvedValue(undefined),
+    getAgent: vi.fn().mockResolvedValue({}),
+    createRecord: vi.fn().mockResolvedValue({
       uri: `at://${_did}/app.bsky.feed.post/test123`,
       cid: 'bafytest',
     }),
-    uploadBlob: jest.fn().mockResolvedValue({
+    uploadBlob: vi.fn().mockResolvedValue({
       ref: { toString: () => 'bafyblob' },
       mimeType: 'image/jpeg',
       size: 1000,
     }),
     ...rest,
-  } as unknown as jest.Mocked<BridgeAccountManager>
+  } as unknown as { [K in keyof BridgeAccountManager]: Mock } & { did: string; handle: string }
 }
 
 export function createMockAppContext(

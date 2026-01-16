@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createFederation, createInboxContext } from '@fedify/testing'
 import { Accept, Create, Follow, Note, Person, Undo } from '@fedify/fedify'
 import type { InboxContext } from '@fedify/fedify'
@@ -87,7 +88,7 @@ describe('inbox', () => {
 
       const pdsClient = createMockPdsClient()
       const bridgeAccount = createMockBridgeAccount({
-        isAvailable: jest.fn().mockReturnValue(false),
+        isAvailable: vi.fn().mockReturnValue(false),
       })
 
       mockCtx = {
@@ -138,7 +139,7 @@ describe('inbox', () => {
 
       const pdsClient = createMockPdsClient()
       const bridgeAccount = createMockBridgeAccount({
-        isAvailable: jest.fn().mockReturnValue(false),
+        isAvailable: vi.fn().mockReturnValue(false),
       })
 
       mockCtx = {
@@ -180,7 +181,7 @@ describe('inbox', () => {
 
       const pdsClient = createMockPdsClient()
       const bridgeAccount = createMockBridgeAccount({
-        isAvailable: jest.fn().mockReturnValue(false),
+        isAvailable: vi.fn().mockReturnValue(false),
       })
 
       mockCtx = {
@@ -233,11 +234,11 @@ describe('inbox', () => {
       federation.setObjectDispatcher(Note, '/posts/{uri}', () => null)
 
       const pdsClient = createMockPdsClient({
-        getAccount: jest.fn().mockResolvedValue({
+        getAccount: vi.fn().mockResolvedValue({
           did: testData.users.alice.did,
           handle: testData.users.alice.handle,
         }),
-        getRecord: jest.fn().mockResolvedValue({
+        getRecord: vi.fn().mockResolvedValue({
           uri: testData.posts.simple.uri,
           cid: testData.posts.simple.cid,
           value: testData.posts.simple.value,
@@ -245,8 +246,8 @@ describe('inbox', () => {
       })
 
       const bridgeAccount = createMockBridgeAccount({
-        isAvailable: jest.fn().mockReturnValue(true),
-        createRecord: jest.fn().mockResolvedValue({
+        isAvailable: vi.fn().mockReturnValue(true),
+        createRecord: vi.fn().mockResolvedValue({
           uri: 'at://did:plc:bridge/app.bsky.feed.post/reply123',
           cid: 'bafyreply123',
         }),
@@ -308,11 +309,11 @@ describe('inbox', () => {
 
       const bridgePostUri = 'at://did:plc:bridge/app.bsky.feed.post/reply123'
       const pdsClient = createMockPdsClient({
-        getAccount: jest.fn().mockResolvedValue({
+        getAccount: vi.fn().mockResolvedValue({
           did: testData.users.alice.did,
           handle: testData.users.alice.handle,
         }),
-        getRecord: jest.fn().mockResolvedValue({
+        getRecord: vi.fn().mockResolvedValue({
           uri: testData.posts.simple.uri,
           cid: testData.posts.simple.cid,
           value: testData.posts.simple.value,
@@ -320,8 +321,8 @@ describe('inbox', () => {
       })
 
       const bridgeAccount = createMockBridgeAccount({
-        isAvailable: jest.fn().mockReturnValue(true),
-        createRecord: jest.fn().mockResolvedValue({
+        isAvailable: vi.fn().mockReturnValue(true),
+        createRecord: vi.fn().mockResolvedValue({
           uri: bridgePostUri,
           cid: 'bafyreply123',
         }),
@@ -380,7 +381,7 @@ describe('inbox', () => {
 
       const pdsClient = createMockPdsClient()
       const bridgeAccount = createMockBridgeAccount({
-        isAvailable: jest.fn().mockReturnValue(true),
+        isAvailable: vi.fn().mockReturnValue(true),
       })
 
       mockCtx = {
@@ -427,7 +428,7 @@ describe('inbox', () => {
 
       const pdsClient = createMockPdsClient()
       const bridgeAccount = createMockBridgeAccount({
-        isAvailable: jest.fn().mockReturnValue(false),
+        isAvailable: vi.fn().mockReturnValue(false),
       })
 
       mockCtx = {
