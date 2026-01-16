@@ -313,7 +313,7 @@ services:
     env_file:
       - ${PDS_DATADIR}/pds.env
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:3000/xrpc/_health"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/xrpc/_health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
