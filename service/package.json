@@ -1,0 +1,12 @@
+{
+  "name": "fedisky",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Service entrypoint for Fedisky - ActivityPub federation sidecar for ATProto PDS",
+  "packageManager": "pnpm@10.28.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@msonnb/fedisky": "0.0.1"
+  }
+}
