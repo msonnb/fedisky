@@ -24,15 +24,15 @@ pnpm build
 
 ## Configuration
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `PDS_URL` | Yes | URL of the ATProto PDS |
-| `PDS_ADMIN_TOKEN` | Yes | Admin token for PDS |
-| `AP_PORT` | No | Port for the service (default: 2588) |
-| `AP_HOSTNAME` | No | Public hostname for the service |
-| `AP_DB_LOCATION` | No | SQLite database path (default: `:memory:`) |
-| `AP_FIREHOSE_ENABLED` | No | Enable firehose processing (default: true) |
-| `AP_BRIDGE_HANDLE` | No | Handle for the bridge account |
+| Variable              | Required | Description                                |
+| --------------------- | -------- | ------------------------------------------ |
+| `PDS_URL`             | Yes      | URL of the ATProto PDS                     |
+| `PDS_ADMIN_TOKEN`     | Yes      | Admin token for PDS                        |
+| `AP_PORT`             | No       | Port for the service (default: 2588)       |
+| `AP_HOSTNAME`         | No       | Public hostname for the service            |
+| `AP_DB_LOCATION`      | No       | SQLite database path (default: `:memory:`) |
+| `AP_FIREHOSE_ENABLED` | No       | Enable firehose processing (default: true) |
+| `AP_BRIDGE_HANDLE`    | No       | Handle for the bridge account              |
 
 ## Usage
 
