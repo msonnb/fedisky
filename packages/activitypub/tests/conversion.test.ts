@@ -6,7 +6,7 @@ import { postConverter } from '../src/conversion/post'
 import { createFederation } from '@fedify/testing'
 import { LanguageString, Note, Document } from '@fedify/fedify'
 import { Temporal } from '@js-temporal/polyfill'
-import { createMockPdsClient, testData } from './_setup'
+import { createMockPdsClient, createTestDb, testData } from './_setup'
 import type { Main as Post } from '@atproto/api/dist/client/types/app/bsky/feed/post'
 
 describe('html-parser', () => {
@@ -187,6 +187,95 @@ describe('postConverter', () => {
       expect(result).toBeDefined()
       const note = result!.object as Note
       expect(note.replyTargetId).toBeDefined()
+    })
+
+    it('should use original AP note ID as replyTarget when post mapping exists', async () => {
+      const federation = createFederation<void>()
+      federation.setActorDispatcher('/users/{identifier}', () => null)
+      federation.setObjectDispatcher(Note, '/posts/{uri}', () => null)
+
+      const ctx = federation.createContext(
+        new URL('https://ap.example'),
+        undefined,
+      )
+      const pdsClient = createMockPdsClient()
+      const db = await createTestDb()
+
+      const bridgePostUri = 'at://did:plc:bridge/app.bsky.feed.post/bridged123'
+      const originalApNoteId =
+        'https://mastodon.social/users/alice/statuses/987654'
+      await db.createPostMapping({
+        atUri: bridgePostUri,
+        apNoteId: originalApNoteId,
+        apActorId: 'https://mastodon.social/users/alice',
+        apActorInbox: 'https://mastodon.social/users/alice/inbox',
+        createdAt: new Date().toISOString(),
+      })
+
+      const replyRecord = {
+        uri: 'at://did:plc:bob456/app.bsky.feed.post/replyxyz',
+        cid: 'bafyreireplyxyz',
+        value: {
+          $type: 'app.bsky.feed.post',
+          text: 'Replying to a bridged post!',
+          createdAt: '2024-01-15T14:00:00.000Z',
+          reply: {
+            root: { uri: bridgePostUri, cid: 'bafybridged123' },
+            parent: { uri: bridgePostUri, cid: 'bafybridged123' },
+          },
+        } as Post,
+      }
+
+      const result = await postConverter.toActivityPub(
+        ctx,
+        testData.users.bob.did,
+        replyRecord,
+        pdsClient,
+        { db },
+      )
+
+      expect(result).toBeDefined()
+      const note = result!.object as Note
+      expect(note.replyTargetId).toBeDefined()
+      // The replyTarget should be the original Mastodon note ID, not our local object URL
+      expect(note.replyTargetId?.href).toBe(originalApNoteId)
+
+      await db.close()
+    })
+
+    it('should use local object URL as replyTarget when no post mapping exists', async () => {
+      const federation = createFederation<void>()
+      federation.setActorDispatcher('/users/{identifier}', () => null)
+      federation.setObjectDispatcher(Note, '/posts/{uri}', () => null)
+
+      const ctx = federation.createContext(
+        new URL('https://ap.example'),
+        undefined,
+      )
+      const pdsClient = createMockPdsClient()
+      const db = await createTestDb()
+
+      const record = {
+        uri: testData.posts.reply.uri,
+        cid: testData.posts.reply.cid,
+        value: testData.posts.reply.value as Post,
+      }
+
+      const result = await postConverter.toActivityPub(
+        ctx,
+        testData.users.bob.did,
+        record,
+        pdsClient,
+        { db },
+      )
+
+      expect(result).toBeDefined()
+      const note = result!.object as Note
+      expect(note.replyTargetId).toBeDefined()
+      // Should use local object URL format since there's no mapping
+      expect(note.replyTargetId?.href).toContain('https://ap.example/posts/')
+
+      await db.close()
     })
   })
 

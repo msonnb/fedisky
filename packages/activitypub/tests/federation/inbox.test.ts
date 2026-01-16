@@ -301,6 +301,79 @@ describe('inbox', () => {
       )
     })
 
+    it('should store post mapping when creating bridge post', async () => {
+      const federation = createTestFederation()
+      federation.setActorDispatcher('/users/{identifier}', () => null)
+      federation.setObjectDispatcher(Note, '/posts/{uri}', () => null)
+
+      const bridgePostUri = 'at://did:plc:bridge/app.bsky.feed.post/reply123'
+      const pdsClient = createMockPdsClient({
+        getAccount: jest.fn().mockResolvedValue({
+          did: testData.users.alice.did,
+          handle: testData.users.alice.handle,
+        }),
+        getRecord: jest.fn().mockResolvedValue({
+          uri: testData.posts.simple.uri,
+          cid: testData.posts.simple.cid,
+          value: testData.posts.simple.value,
+        }),
+      })
+
+      const bridgeAccount = createMockBridgeAccount({
+        isAvailable: jest.fn().mockReturnValue(true),
+        createRecord: jest.fn().mockResolvedValue({
+          uri: bridgePostUri,
+          cid: 'bafyreply123',
+        }),
+      })
+
+      mockCtx = {
+        db,
+        pdsClient,
+        bridgeAccount,
+        federation,
+        cfg: {
+          service: { publicUrl: 'https://ap.example' },
+          bridge: { handle: 'bridge.test' },
+        },
+      } as unknown as AppContext
+
+      setupInboxListeners(mockCtx)
+
+      const remoteActorId = 'https://remote.example/users/bob'
+      const remoteActorInbox = 'https://remote.example/users/bob/inbox'
+      const remoteNoteId = 'https://remote.example/notes/reply-1'
+
+      const remoteActor = new Person({
+        id: new URL(remoteActorId),
+        preferredUsername: 'bob',
+        inbox: new URL(remoteActorInbox),
+      })
+
+      const replyNote = new Note({
+        id: new URL(remoteNoteId),
+        content: '<p>Great post!</p>',
+        replyTarget: new URL(
+          `https://ap.example/posts/${testData.posts.simple.uri}`,
+        ),
+        published: Temporal.Now.instant(),
+      })
+
+      const create = new Create({
+        id: new URL('https://remote.example/activities/create-1'),
+        actor: remoteActor,
+        object: replyNote,
+      })
+
+      await invokeInboxListener(federation, 'Create', create)
+
+      const mapping = await db.getPostMapping(bridgePostUri)
+      expect(mapping).toBeDefined()
+      expect(mapping?.apNoteId).toBe(remoteNoteId)
+      expect(mapping?.apActorId).toBe(remoteActorId)
+      expect(mapping?.apActorInbox).toBe(remoteActorInbox)
+    })
+
     it('should skip Create when Note is not a reply', async () => {
       const federation = createTestFederation()
       federation.setActorDispatcher('/users/{identifier}', () => null)
