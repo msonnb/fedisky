@@ -5,6 +5,7 @@ on:
       - release
     tags:
       - v*
+  workflow_dispatch:
 env:
   REGISTRY: ghcr.io
   USERNAME: ${{ github.actor }}
