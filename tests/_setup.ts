@@ -1,7 +1,7 @@
 import { vi, type Mock } from 'vitest'
+import type { BridgeAccountManager } from '../src/bridge-account'
 import { APDatabase } from '../src/db'
 import type { PDSClient } from '../src/pds-client'
-import type { BridgeAccountManager } from '../src/bridge-account'
 
 export async function createTestDb(): Promise<APDatabase> {
   const db = new APDatabase(':memory:')
@@ -59,7 +59,10 @@ export function createMockBridgeAccount(
     _did?: string
     _handle?: string
   } = {},
-): { [K in keyof BridgeAccountManager]: Mock } & { did: string; handle: string } {
+): { [K in keyof BridgeAccountManager]: Mock } & {
+  did: string
+  handle: string
+} {
   const {
     _did = 'did:plc:bridge',
     _handle = 'bridge.test',
@@ -85,7 +88,10 @@ export function createMockBridgeAccount(
       size: 1000,
     }),
     ...rest,
-  } as unknown as { [K in keyof BridgeAccountManager]: Mock } & { did: string; handle: string }
+  } as unknown as { [K in keyof BridgeAccountManager]: Mock } & {
+    did: string
+    handle: string
+  }
 }
 
 export function createMockAppContext(

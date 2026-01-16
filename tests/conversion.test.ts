@@ -1,15 +1,15 @@
+import type { Main as Post } from '@atproto/api/dist/client/types/app/bsky/feed/post'
+import { LanguageString, Note, Document, type Context } from '@fedify/fedify'
+import { createFederation } from '@fedify/testing'
+import { Temporal } from '@js-temporal/polyfill'
 import { describe, it, expect } from 'vitest'
+import { postConverter } from '../src/conversion/post'
 import {
   parseHtmlContent,
   extractLanguage,
 } from '../src/conversion/util/html-parser'
-import { postConverter } from '../src/conversion/post'
-import { createFederation } from '@fedify/testing'
-import { LanguageString, Note, Document, type Context } from '@fedify/fedify'
-import { Temporal } from '@js-temporal/polyfill'
-import { createMockPdsClient, createTestDb, testData } from './_setup'
-import type { Main as Post } from '@atproto/api/dist/client/types/app/bsky/feed/post'
 import type { PDSClient } from '../src/pds-client'
+import { createMockPdsClient, createTestDb, testData } from './_setup'
 
 describe('html-parser', () => {
   describe('parseHtmlContent', () => {

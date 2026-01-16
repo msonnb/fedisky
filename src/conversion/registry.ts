@@ -1,7 +1,7 @@
-import type { Activity, Object as APObject, Context } from '@fedify/fedify'
 import { BlobRef } from '@atproto/api'
-import { PDSClient } from '../pds-client'
+import type { Activity, Object as APObject, Context } from '@fedify/fedify'
 import type { APDatabase } from '../db'
+import { PDSClient } from '../pds-client'
 
 export type BlobUploader = (
   data: Uint8Array,

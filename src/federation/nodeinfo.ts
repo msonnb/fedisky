@@ -3,7 +3,7 @@ import { AppContext } from '../context'
 import { apLogger } from '../logger'
 
 export function setupNodeInfoDispatcher(ctx: AppContext) {
-  ctx.federation.setNodeInfoDispatcher('/nodeinfo/2.1', async (fedCtx) => {
+  ctx.federation.setNodeInfoDispatcher('/nodeinfo/2.1', async (_fedCtx) => {
     try {
       const accountCount = await ctx.pdsClient.getAccountCount()
 

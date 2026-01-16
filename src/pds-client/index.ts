@@ -1,8 +1,8 @@
 import { AtpAgent } from '@atproto/api'
 import { AccountView } from '@atproto/api/dist/client/types/com/atproto/admin/defs'
 import { Main as ProfileRecord } from '@atproto/bsky/dist/lexicon/types/app/bsky/actor/profile'
-import { apLogger } from '../logger'
 import { APFederationConfig } from '../config'
+import { apLogger } from '../logger'
 
 export interface RecordResult {
   uri: string
@@ -260,7 +260,7 @@ export class PDSClient {
   getImageUrl(
     did: string,
     cid: string,
-    format: 'avatar' | 'banner' | 'feed_fullsize' | 'feed_thumbnail',
+    _format: 'avatar' | 'banner' | 'feed_fullsize' | 'feed_thumbnail',
   ): string {
     // Use the blob URL directly for now
     // In production, this could point to an image processing service

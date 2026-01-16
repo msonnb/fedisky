@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3'
 import { Kysely, SqliteDialect, Migrator, Migration } from 'kysely'
+import migrations from './migrations'
 import {
   DatabaseSchema,
   follow,
@@ -7,7 +8,6 @@ import {
   bridgeAccount,
   postMapping,
 } from './schema'
-import migrations from './migrations'
 
 export type { DatabaseSchema } from './schema'
 

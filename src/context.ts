@@ -3,11 +3,11 @@ import {
   type Federation,
   MemoryKvStore,
 } from '@fedify/fedify'
+import { BridgeAccountManager } from './bridge-account'
 import { APFederationConfig } from './config'
 import { APDatabase } from './db'
-import { PDSClient } from './pds-client'
-import { BridgeAccountManager } from './bridge-account'
 import { logger } from './logger'
+import { PDSClient } from './pds-client'
 
 export type AppContextOptions = {
   cfg: APFederationConfig

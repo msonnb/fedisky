@@ -4,8 +4,8 @@ import { setupActorDispatcher } from './actor'
 import { setupFollowersDispatcher } from './followers'
 import { setupFollowingDispatcher } from './following'
 import { setupInboxListeners } from './inbox'
-import { setupOutboxDispatcher, recordConverterRegistry } from './outbox'
 import { setupNodeInfoDispatcher } from './nodeinfo'
+import { setupOutboxDispatcher, recordConverterRegistry } from './outbox'
 
 export { recordConverterRegistry }
 

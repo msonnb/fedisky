@@ -1,9 +1,9 @@
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 import { AtpAgent, BlobRef } from '@atproto/api'
 import { APFederationConfig } from '../config'
 import { APDatabase } from '../db'
-import { PDSClient } from '../pds-client'
 import { apLogger } from '../logger'
+import { PDSClient } from '../pds-client'
 
 export class BridgeAccountManager {
   private cfg: APFederationConfig
