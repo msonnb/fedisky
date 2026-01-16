@@ -312,11 +312,11 @@ services:
         target: ${PDS_DATADIR}
     env_file:
       - ${PDS_DATADIR}/pds.env
-		healthcheck:
-			test: ["CMD", "curl", "--fail", "http://localhost:3000/xrpc/_health"]
-			interval: 10s
-			timeout: 5s
-			retries: 3
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:3000/xrpc/_health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
   activitypub:
     container_name: activitypub
     image: ${AP_IMAGE}
@@ -324,8 +324,8 @@ services:
     restart: unless-stopped
     depends_on:
       pds:
-				condition: service_healthy
-				restart: true
+        condition: service_healthy
+        restart: true
     volumes:
       - type: bind
         source: ${AP_DATADIR}
