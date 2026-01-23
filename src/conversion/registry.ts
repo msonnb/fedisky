@@ -29,7 +29,11 @@ export interface RecordConverter<
     record: { uri: string; cid: string; value: T },
     pdsClient: PDSClient,
     options?: ToActivityPubContext,
-  ): Promise<{ object: TObject; activity?: Activity } | null>
+  ): Promise<
+    | { object: TObject; activity?: Activity }
+    | { object: null; activity: Activity }
+    | null
+  >
 
   toRecord(
     ctx: Context<void>,

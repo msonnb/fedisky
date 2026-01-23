@@ -129,6 +129,11 @@ export const testData = {
       did: 'did:plc:bob456',
       handle: 'bob.test',
     },
+    // External user not on this PDS
+    external: {
+      did: 'did:plc:external789',
+      handle: 'external.other',
+    },
   },
   posts: {
     simple: {
@@ -179,6 +184,34 @@ export const testData = {
             cid: 'bafyreiabc123',
           },
         },
+      },
+    },
+  },
+  reposts: {
+    // Bob reposts Alice's post (local repost)
+    localRepost: {
+      uri: 'at://did:plc:bob456/app.bsky.feed.repost/repost123',
+      cid: 'bafyreirepost123',
+      value: {
+        $type: 'app.bsky.feed.repost',
+        subject: {
+          uri: 'at://did:plc:alice123/app.bsky.feed.post/abc123',
+          cid: 'bafyreiabc123',
+        },
+        createdAt: '2024-01-15T14:00:00.000Z',
+      },
+    },
+    // Bob reposts an external user's post (should be skipped)
+    externalRepost: {
+      uri: 'at://did:plc:bob456/app.bsky.feed.repost/repost456',
+      cid: 'bafyreirepost456',
+      value: {
+        $type: 'app.bsky.feed.repost',
+        subject: {
+          uri: 'at://did:plc:external789/app.bsky.feed.post/extpost1',
+          cid: 'bafyreiextpost1',
+        },
+        createdAt: '2024-01-15T15:00:00.000Z',
       },
     },
   },
