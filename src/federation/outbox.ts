@@ -1,11 +1,16 @@
 import { AtUri } from '@atproto/syntax'
 import { Note } from '@fedify/fedify'
 import { AppContext } from '../context'
-import { RecordConverterRegistry, postConverter } from '../conversion'
+import {
+  RecordConverterRegistry,
+  postConverter,
+  repostConverter,
+} from '../conversion'
 import { apLogger } from '../logger'
 
 export const recordConverterRegistry = new RecordConverterRegistry()
 recordConverterRegistry.register(postConverter)
+recordConverterRegistry.register(repostConverter)
 
 export function setupOutboxDispatcher(ctx: AppContext) {
   ctx.federation

@@ -1,8 +1,17 @@
 import { cborDecodeMulti } from '@atproto/common'
 import { AtUri } from '@atproto/syntax'
-import { Context, Delete, Note, PUBLIC_COLLECTION } from '@fedify/fedify'
+import {
+  Activity,
+  Announce,
+  Context,
+  Delete,
+  Note,
+  PUBLIC_COLLECTION,
+  Undo,
+} from '@fedify/fedify'
 import { WebSocket } from 'ws'
 import { AppContext } from '../context'
+import type { RecordConverter } from '../conversion'
 import { recordConverterRegistry } from '../federation'
 import { apLogger } from '../logger'
 
@@ -201,7 +210,7 @@ export class FirehoseProcessor {
     did: string,
     uri: string,
     collection: string,
-    recordConverter: ReturnType<typeof recordConverterRegistry.get>,
+    recordConverter: RecordConverter | undefined,
   ) {
     if (!recordConverter) return
 
@@ -322,42 +331,97 @@ export class FirehoseProcessor {
     uri: string,
   ) {
     try {
-      const actor = fedifyContext.getActorUri(did)
-      const objectUri = fedifyContext.getObjectUri(Note, { uri })
-      const followersUri = fedifyContext.getFollowersUri(did)
+      const activity = this.buildDeleteActivity(fedifyContext, did, uri)
 
-      const deleteActivity = new Delete({
-        id: new URL(`#delete-${Date.now()}`, objectUri),
-        actor,
-        to: PUBLIC_COLLECTION,
-        cc: followersUri,
-        object: objectUri,
-      })
-
-      try {
-        await fedifyContext.sendActivity(
-          { identifier: did },
-          'followers',
-          deleteActivity,
-        )
-        apLogger.info(
-          {
-            did,
-            uri,
-            activityId: deleteActivity.id?.href,
-          },
-          'sent delete activity to followers',
-        )
-      } catch (sendErr) {
-        apLogger.warn(
-          { did, uri, activityId: deleteActivity.id?.href, err: sendErr },
-          'failed to send delete activity to followers',
-        )
+      if (!activity) {
+        apLogger.debug({ did, uri }, 'skipping event: no activity to send')
+        return
       }
+
+      await this.sendActivityToFollowers({
+        fedifyContext,
+        did,
+        activity,
+      })
     } catch (err) {
       apLogger.warn(
         { did, uri, err },
         'failed to process delete for AP delivery',
+      )
+    }
+  }
+
+  private buildDeleteActivity(
+    fedifyContext: Context<void>,
+    did: string,
+    uri: string,
+  ) {
+    const actor = fedifyContext.getActorUri(did)
+    const followersUri = fedifyContext.getFollowersUri(did)
+
+    const atUri = new AtUri(uri)
+    switch (atUri.collection) {
+      case 'app.bsky.feed.repost': {
+        const announceId = new URL(
+          `/reposts/${encodeURIComponent(uri)}`,
+          fedifyContext.origin,
+        )
+        return new Undo({
+          id: new URL(`#undo-${Date.now()}`, announceId),
+          actor,
+          to: PUBLIC_COLLECTION,
+          cc: followersUri,
+          object: new Announce({ id: announceId }),
+        })
+      }
+      case 'app.bsky.feed.post': {
+        const objectUri = fedifyContext.getObjectUri(Note, { uri })
+        return new Delete({
+          id: new URL(`#delete-${Date.now()}`, objectUri),
+          actor,
+          to: PUBLIC_COLLECTION,
+          cc: followersUri,
+          object: objectUri,
+        })
+      }
+      default:
+        return null
+    }
+  }
+
+  private async sendActivityToFollowers(opts: {
+    fedifyContext: Context<void>
+    did: string
+    activity: Activity
+  }) {
+    const { fedifyContext, did, activity } = opts
+    const activityType = activity.constructor.name
+
+    try {
+      await fedifyContext.sendActivity(
+        { identifier: did },
+        'followers',
+        activity,
+      )
+      apLogger.info(
+        {
+          did,
+          activityId: activity.id?.href,
+          activityType,
+          objectId: activity.objectId?.href,
+        },
+        'sent activity to followers',
+      )
+    } catch (sendErr) {
+      apLogger.warn(
+        {
+          did,
+          activityId: activity.id?.href,
+          err: sendErr,
+          activityType,
+          objectId: activity.objectId?.href,
+        },
+        'failed to send activity to followers',
       )
     }
   }
