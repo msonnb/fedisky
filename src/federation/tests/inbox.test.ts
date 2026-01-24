@@ -3,15 +3,15 @@ import type { InboxContext } from '@fedify/fedify'
 import { createFederation, createInboxContext } from '@fedify/testing'
 import { Temporal } from '@js-temporal/polyfill'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import type { AppContext } from '../../src/context'
-import type { APDatabase } from '../../src/db'
-import { setupInboxListeners } from '../../src/federation/inbox'
+import type { AppContext } from '../../context'
+import type { APDatabase } from '../../db'
 import {
   createTestDb,
   createMockPdsClient,
   createMockBridgeAccount,
   testData,
-} from '../_setup'
+} from '../../test-utils'
+import { setupInboxListeners } from '../inbox'
 
 function createTestFederation() {
   return createFederation<void>({

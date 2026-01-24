@@ -3,13 +3,10 @@ import { LanguageString, Note, Document, type Context } from '@fedify/fedify'
 import { createFederation } from '@fedify/testing'
 import { Temporal } from '@js-temporal/polyfill'
 import { describe, it, expect } from 'vitest'
-import { postConverter } from '../src/conversion/post'
-import {
-  parseHtmlContent,
-  extractLanguage,
-} from '../src/conversion/util/html-parser'
-import type { PDSClient } from '../src/pds-client'
-import { createMockPdsClient, createTestDb, testData } from './_setup'
+import type { PDSClient } from '../../pds-client'
+import { createMockPdsClient, createTestDb, testData } from '../../test-utils'
+import { postConverter } from '../post'
+import { parseHtmlContent, extractLanguage } from '../util/html-parser'
 
 describe('html-parser', () => {
   describe('parseHtmlContent', () => {

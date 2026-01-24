@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { APDatabase } from '../src/db'
+import { APDatabase } from '../index'
 
 describe('APDatabase', () => {
   let db: APDatabase

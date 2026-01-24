@@ -1,15 +1,15 @@
 import { Announce, Delete, Note, PUBLIC_COLLECTION, Undo } from '@fedify/fedify'
 import { createFederation } from '@fedify/testing'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import type { AppContext } from '../../src/context'
-import type { APDatabase } from '../../src/db'
-import { FirehoseProcessor } from '../../src/firehose/processor'
+import type { AppContext } from '../../context'
+import type { APDatabase } from '../../db'
 import {
   createTestDb,
   createMockPdsClient,
   createMockBridgeAccount,
   testData,
-} from '../_setup'
+} from '../../test-utils'
+import { FirehoseProcessor } from '../processor'
 
 describe('FirehoseProcessor', () => {
   let db: APDatabase
