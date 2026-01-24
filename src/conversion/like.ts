@@ -1,27 +1,27 @@
-import type { Main as Repost } from '@atproto/api/dist/client/types/app/bsky/feed/repost'
+import type { Main as LikeRecord } from '@atproto/api/dist/client/types/app/bsky/feed/like'
 import { AtUri } from '@atproto/syntax'
-import { Announce, Note, PUBLIC_COLLECTION } from '@fedify/fedify'
+import { Like, Note, PUBLIC_COLLECTION } from '@fedify/fedify'
 import { Temporal } from '@js-temporal/polyfill'
 import { apLogger } from '../logger'
 import { RecordConverter } from './registry'
 import { isLocalUser } from './util/is-local-user'
 
-export const repostConverter: RecordConverter<Repost, Note> = {
-  collection: 'app.bsky.feed.repost',
+export const likeConverter: RecordConverter<LikeRecord, Note> = {
+  collection: 'app.bsky.feed.like',
 
   async toActivityPub(ctx, identifier, record, pdsClient, _options) {
-    const repost = record.value
-    const subjectUri = repost.subject.uri
+    const like = record.value
+    const subjectUri = like.subject.uri
     const subjectAtUri = new AtUri(subjectUri)
     const subjectDid = subjectAtUri.hostname
 
     // Check if the subject post is from a local user on this PDS
-    // We only generate Announce activities for reposts of local posts
+    // We only generate Like activities for likes of local posts
     const isLocalPost = await isLocalUser(pdsClient, subjectDid)
     if (!isLocalPost) {
       apLogger.debug(
-        { repostUri: record.uri, subjectUri, subjectDid },
-        'skipping repost of external post (not on this PDS)',
+        { likeUri: record.uri, subjectUri, subjectDid },
+        'skipping like of external post (not on this PDS)',
       )
       return null
     }
@@ -29,15 +29,15 @@ export const repostConverter: RecordConverter<Repost, Note> = {
     const actor = ctx.getActorUri(identifier)
     const followersUri = ctx.getFollowersUri(identifier)
     const subjectNoteId = ctx.getObjectUri(Note, { uri: subjectUri })
-    const announceId = new URL(
-      `/reposts/${encodeURIComponent(record.uri)}`,
+    const likeId = new URL(
+      `/likes/${encodeURIComponent(record.uri)}`,
       ctx.origin,
     )
 
-    const published = Temporal.Instant.from(repost.createdAt)
+    const published = Temporal.Instant.from(like.createdAt)
 
-    const announce = new Announce({
-      id: announceId,
+    const activity = new Like({
+      id: likeId,
       actor,
       to: PUBLIC_COLLECTION,
       cc: followersUri,
@@ -47,16 +47,16 @@ export const repostConverter: RecordConverter<Repost, Note> = {
 
     apLogger.debug(
       {
-        repostUri: record.uri,
+        likeUri: record.uri,
         subjectUri,
-        announceId: announceId.href,
+        likeId: likeId.href,
       },
-      'converted repost to Announce activity',
+      'converted like to Like activity',
     )
 
     return {
       object: null,
-      activity: announce,
+      activity,
     }
   },
 

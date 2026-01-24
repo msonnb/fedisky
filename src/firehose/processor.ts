@@ -5,6 +5,7 @@ import {
   Announce,
   Context,
   Delete,
+  Like,
   Note,
   PUBLIC_COLLECTION,
   Undo,
@@ -361,6 +362,19 @@ export class FirehoseProcessor {
 
     const atUri = new AtUri(uri)
     switch (atUri.collection) {
+      case 'app.bsky.feed.like': {
+        const likeId = new URL(
+          `/likes/${encodeURIComponent(uri)}`,
+          fedifyContext.origin,
+        )
+        return new Undo({
+          id: new URL(`#undo-${Date.now()}`, likeId),
+          actor,
+          to: PUBLIC_COLLECTION,
+          cc: followersUri,
+          object: new Like({ id: likeId }),
+        })
+      }
       case 'app.bsky.feed.repost': {
         const announceId = new URL(
           `/reposts/${encodeURIComponent(uri)}`,
