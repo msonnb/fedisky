@@ -1,4 +1,4 @@
-FROM node:22-alpine3.22 as build
+FROM node:22-alpine3.22 AS build
 
 RUN corepack enable
 
@@ -6,7 +6,7 @@ RUN corepack enable
 WORKDIR /app
 COPY ./service ./
 RUN corepack prepare --activate
-RUN pnpm install --production --frozen-lockfile > /dev/null
+RUN pnpm install --production --frozen-lockfile
 
 # Uses assets from build stage to reduce build size
 FROM node:22-alpine3.22

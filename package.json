@@ -18,9 +18,10 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --build tsconfig.build.json",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "vitest run --exclude 'e2e-tests/**'",
+    "test:watch": "vitest --exclude 'e2e-tests/**'",
     "test:log": "tail -50 test.log | pino-pretty",
+    "test:e2e": "bash e2e-tests/run-e2e.sh",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write ."

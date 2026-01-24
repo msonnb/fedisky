@@ -1,0 +1,50 @@
+services:
+  # ATProto PDS
+  pds:
+    image: ghcr.io/bluesky-social/pds:0.4
+    ports:
+      - '3000:3000'
+    environment:
+      PDS_HOSTNAME: bsky.test
+      PDS_JWT_SECRET: e2e-jwt-secret-for-testing-only
+      PDS_ADMIN_PASSWORD: admin-password
+      PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+      PDS_DATA_DIRECTORY: /pds
+      PDS_BLOBSTORE_DISK_LOCATION: /pds/blobs
+      PDS_DID_PLC_URL: https://plc.directory
+      PDS_CRAWLERS: ''
+      LOG_ENABLED: 'true'
+    volumes:
+      - pds-data:/pds
+    healthcheck:
+      test:
+        ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/xrpc/_health']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    networks:
+      - e2e-network
+
+  # Caddy reverse proxy with automatic TLS
+  caddy:
+    image: caddy:2
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on:
+      pds:
+        condition: service_healthy
+    networks:
+      - e2e-network
+
+networks:
+  e2e-network:
+    driver: bridge
+
+volumes:
+  pds-data:
+  caddy-data:
