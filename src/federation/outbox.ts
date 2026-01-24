@@ -3,6 +3,7 @@ import { Note } from '@fedify/fedify'
 import { AppContext } from '../context'
 import {
   RecordConverterRegistry,
+  likeConverter,
   postConverter,
   repostConverter,
 } from '../conversion'
@@ -10,6 +11,7 @@ import { apLogger } from '../logger'
 
 export const recordConverterRegistry = new RecordConverterRegistry()
 recordConverterRegistry.register(postConverter)
+recordConverterRegistry.register(likeConverter)
 recordConverterRegistry.register(repostConverter)
 
 export function setupOutboxDispatcher(ctx: AppContext) {

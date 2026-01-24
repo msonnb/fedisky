@@ -183,4 +183,30 @@ export const testData = {
       },
     },
   },
+  likes: {
+    localLike: {
+      uri: 'at://did:plc:bob456/app.bsky.feed.like/like123',
+      cid: 'bafyreiLike123',
+      value: {
+        $type: 'app.bsky.feed.like',
+        subject: {
+          uri: 'at://did:plc:alice123/app.bsky.feed.post/abc123',
+          cid: 'bafyreiabc123',
+        },
+        createdAt: '2024-01-15T14:30:00.000Z',
+      },
+    },
+    externalLike: {
+      uri: 'at://did:plc:bob456/app.bsky.feed.like/like456',
+      cid: 'bafyreiLike456',
+      value: {
+        $type: 'app.bsky.feed.like',
+        subject: {
+          uri: 'at://did:plc:external789/app.bsky.feed.post/extpost1',
+          cid: 'bafyreiextpost1',
+        },
+        createdAt: '2024-01-15T15:30:00.000Z',
+      },
+    },
+  },
 }
