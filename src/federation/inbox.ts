@@ -7,6 +7,14 @@ import { apLogger } from '../logger'
 export function setupInboxListeners(ctx: AppContext) {
   ctx.federation
     .setInboxListeners('/users/{+identifier}/inbox', '/inbox')
+    .setSharedKeyDispatcher(async () => {
+      // Use the bridge account as the instance actor for signing shared inbox fetches
+      const bridgeDid = ctx.bridgeAccount.did
+      if (!ctx.bridgeAccount.isAvailable() || bridgeDid === null) {
+        return null
+      }
+      return { identifier: bridgeDid }
+    })
     .on(Follow, async (fedCtx, follow) => {
       try {
         if (
