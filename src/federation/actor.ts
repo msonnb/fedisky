@@ -1,5 +1,6 @@
 import { BlobRef } from '@atproto/lexicon'
 import {
+  Endpoints,
   exportJwk,
   generateCryptoKeyPair,
   Image,
@@ -82,6 +83,9 @@ export function setupActorDispatcher(ctx: AppContext) {
           outbox: fedCtx.getOutboxUri(identifier),
           followers: fedCtx.getFollowersUri(identifier),
           following: fedCtx.getFollowingUri(identifier),
+          endpoints: new Endpoints({
+            sharedInbox: fedCtx.getInboxUri(),
+          }),
           publicKey: keyPairs[0].cryptographicKey,
           assertionMethods: keyPairs.map((keyPair) => keyPair.multikey),
         })
