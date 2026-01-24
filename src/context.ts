@@ -41,6 +41,7 @@ export class AppContext {
     const bridgeAccount = new BridgeAccountManager(cfg, db, pdsClient)
     const federation = createFederation<void>({
       kv: new MemoryKvStore(),
+      allowPrivateAddress: cfg.allowPrivateAddress,
     })
     return new AppContext({
       cfg,

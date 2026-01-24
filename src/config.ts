@@ -4,6 +4,7 @@ export function readEnv() {
   return {
     port: envInt('AP_PORT'),
     hostname: envStr('AP_HOSTNAME'),
+    publicUrl: envStr('AP_PUBLIC_URL'),
     version: envStr('AP_VERSION'),
     pdsUrl: envStr('PDS_URL'),
     pdsAdminToken: envStr('PDS_ADMIN_TOKEN'),
@@ -13,6 +14,7 @@ export function readEnv() {
     bridgeHandle: envStr('AP_BRIDGE_HANDLE'),
     bridgeDisplayName: envStr('AP_BRIDGE_DISPLAY_NAME'),
     bridgeDescription: envStr('AP_BRIDGE_DESCRIPTION'),
+    allowPrivateAddress: envBool('AP_ALLOW_PRIVATE_ADDRESS'),
   }
 }
 
@@ -42,15 +44,19 @@ export interface APFederationConfig {
     displayName: string
     description: string
   }
+  /** Allow fetching private network addresses (for E2E testing only) */
+  allowPrivateAddress?: boolean
 }
 
 export function envToConfig(env: ServerEnvironment): APFederationConfig {
   const port = env.port ?? 2588
   const hostname = env.hostname ?? 'localhost'
+  // Allow explicit override via AP_PUBLIC_URL, otherwise derive from hostname
   const publicUrl =
-    hostname === 'localhost'
+    env.publicUrl ??
+    (hostname === 'localhost'
       ? `http://localhost:${port}`
-      : `https://${hostname}`
+      : `https://${hostname}`)
   const version = env.version ?? '0.0.0'
   const bridgeHandle =
     env.bridgeHandle ??
@@ -81,6 +87,7 @@ export function envToConfig(env: ServerEnvironment): APFederationConfig {
         env.bridgeDescription ??
         'This account posts content from Mastodon and other Fediverse servers.',
     },
+    allowPrivateAddress: env.allowPrivateAddress ?? false,
   }
 }
 

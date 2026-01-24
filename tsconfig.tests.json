@@ -3,6 +3,6 @@
   "compilerOptions": {
     "rootDir": "."
   },
-  "include": ["./src", "./tests"],
+  "include": ["./src", "./e2e-tests"],
   "references": [{ "path": "./tsconfig.build.json" }]
 }

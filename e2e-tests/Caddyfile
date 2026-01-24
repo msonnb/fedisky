@@ -1,0 +1,18 @@
+{
+	local_certs
+	auto_https disable_redirects
+}
+
+bsky.test {
+	@activitypub path /users/* /posts/* /.well-known/webfinger* /.well-known/nodeinfo* /nodeinfo/*
+	handle @activitypub {
+		reverse_proxy host.internal:2588
+	}
+	handle {
+		reverse_proxy pds:3000
+	}
+}
+
+mastodon.test {
+	reverse_proxy host.internal:3001
+}
