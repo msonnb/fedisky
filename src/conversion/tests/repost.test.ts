@@ -2,9 +2,9 @@ import type { Main as Repost } from '@atproto/api/dist/client/types/app/bsky/fee
 import { Announce, Note, PUBLIC_COLLECTION, type Context } from '@fedify/fedify'
 import { createFederation } from '@fedify/testing'
 import { describe, it, expect, vi } from 'vitest'
-import { repostConverter } from '../../src/conversion/repost'
-import type { PDSClient } from '../../src/pds-client'
-import { createMockPdsClient, testData } from '../_setup'
+import type { PDSClient } from '../../pds-client'
+import { createMockPdsClient, testData } from '../../test-utils'
+import { repostConverter } from '../repost'
 
 describe('repostConverter', () => {
   describe('toActivityPub', () => {

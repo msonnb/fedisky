@@ -1,7 +1,7 @@
 import { vi, type Mock } from 'vitest'
-import type { BridgeAccountManager } from '../src/bridge-account'
-import { APDatabase } from '../src/db'
-import type { PDSClient } from '../src/pds-client'
+import type { BridgeAccountManager } from '../bridge-account'
+import { APDatabase } from '../db'
+import type { PDSClient } from '../pds-client'
 
 export async function createTestDb(): Promise<APDatabase> {
   const db = new APDatabase(':memory:')
@@ -51,9 +51,6 @@ export function createMockPdsClient(
   } as unknown as PDSClient
 }
 
-/**
- * Creates a mock BridgeAccountManager with configurable method implementations
- */
 export function createMockBridgeAccount(
   overrides: Partial<BridgeAccountManager> & {
     _did?: string
@@ -94,31 +91,6 @@ export function createMockBridgeAccount(
   }
 }
 
-export function createMockAppContext(
-  overrides: {
-    db?: APDatabase
-    pdsClient?: Partial<PDSClient>
-    bridgeAccount?: Partial<BridgeAccountManager>
-    cfg?: Partial<{
-      service: { publicUrl: string }
-      pds: { url: string }
-      bridge: { handle: string }
-    }>
-  } = {},
-) {
-  return {
-    db: overrides.db,
-    pdsClient: createMockPdsClient(overrides.pdsClient),
-    bridgeAccount: createMockBridgeAccount(overrides.bridgeAccount as any),
-    cfg: {
-      service: { publicUrl: 'https://ap.example' },
-      pds: { url: 'https://pds.example' },
-      bridge: { handle: 'bridge.test' },
-      ...overrides.cfg,
-    },
-  }
-}
-
 export const testData = {
   users: {
     alice: {
@@ -129,7 +101,6 @@ export const testData = {
       did: 'did:plc:bob456',
       handle: 'bob.test',
     },
-    // External user not on this PDS
     external: {
       did: 'did:plc:external789',
       handle: 'external.other',
@@ -157,7 +128,6 @@ export const testData = {
           images: [
             {
               image: {
-                // Use untypedJsonBlobRef format with a valid CID
                 cid: 'bafkreihrn6b2blc3jk34cvmqyolxc27i4c567s57d5r2k4d2z3fpfsfdqa',
                 mimeType: 'image/jpeg',
               },
@@ -188,7 +158,6 @@ export const testData = {
     },
   },
   reposts: {
-    // Bob reposts Alice's post (local repost)
     localRepost: {
       uri: 'at://did:plc:bob456/app.bsky.feed.repost/repost123',
       cid: 'bafyreirepost123',
@@ -201,7 +170,6 @@ export const testData = {
         createdAt: '2024-01-15T14:00:00.000Z',
       },
     },
-    // Bob reposts an external user's post (should be skipped)
     externalRepost: {
       uri: 'at://did:plc:bob456/app.bsky.feed.repost/repost456',
       cid: 'bafyreirepost456',
