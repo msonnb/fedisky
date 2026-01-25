@@ -1,5 +1,11 @@
 import type { Main as Post } from '@atproto/api/dist/client/types/app/bsky/feed/post'
-import { LanguageString, Note, Document, type Context } from '@fedify/fedify'
+import {
+  LanguageString,
+  Mention,
+  Note,
+  Document,
+  type Context,
+} from '@fedify/fedify'
 import { createFederation } from '@fedify/testing'
 import { Temporal } from '@js-temporal/polyfill'
 import { describe, it, expect } from 'vitest'
@@ -57,16 +63,17 @@ describe('html-parser', () => {
     })
   })
 
-  describe('parseHtmlContent facets', () => {
-    it('should create facets for links with correct byte offsets', () => {
+  describe('parseHtmlContent links', () => {
+    it('should collect links with href and text content', () => {
       const result = parseHtmlContent(
         '<p>Visit <a href="https://example.com">example.com</a> today</p>',
       )
       expect(result.text).toBe('Visit example.com today')
-      expect(result.facets).toHaveLength(1)
-      expect(result.facets[0].features[0]).toMatchObject({
-        $type: 'app.bsky.richtext.facet#link',
-        uri: 'https://example.com',
+      expect(result.links).toHaveLength(1)
+      expect(result.links[0]).toMatchObject({
+        href: 'https://example.com',
+        textContent: 'example.com',
+        isMention: false,
       })
     })
 
@@ -75,12 +82,70 @@ describe('html-parser', () => {
         '<p><a href="https://a.com">first</a> and <a href="https://b.com">second</a></p>',
       )
       expect(result.text).toBe('first and second')
-      expect(result.facets).toHaveLength(2)
-      expect(result.facets[0].features[0]).toMatchObject({
-        uri: 'https://a.com',
+      expect(result.links).toHaveLength(2)
+      expect(result.links[0]).toMatchObject({
+        href: 'https://a.com',
+        isMention: false,
       })
-      expect(result.facets[1].features[0]).toMatchObject({
-        uri: 'https://b.com',
+      expect(result.links[1]).toMatchObject({
+        href: 'https://b.com',
+        isMention: false,
+      })
+    })
+
+    it('should detect mention links with class="mention"', () => {
+      const result = parseHtmlContent(
+        '<p>Hello <a href="https://ap.example/users/did:plc:abc123" class="mention">@alice</a>!</p>',
+      )
+      expect(result.text).toBe('Hello @alice!')
+      expect(result.links).toHaveLength(1)
+      expect(result.links[0]).toMatchObject({
+        href: 'https://ap.example/users/did:plc:abc123',
+        textContent: '@alice',
+        isMention: true,
+      })
+    })
+
+    it('should detect Mastodon-style mentions with u-url class', () => {
+      const result = parseHtmlContent(
+        '<p><span class="h-card"><a href="https://ap.example/users/did:plc:xyz" class="u-url mention">@<span>bob</span></a></span> check this out</p>',
+      )
+      expect(result.text).toBe('@bob check this out')
+      expect(result.links).toHaveLength(1)
+      expect(result.links[0]).toMatchObject({
+        href: 'https://ap.example/users/did:plc:xyz',
+        textContent: '@bob',
+        isMention: true,
+      })
+    })
+
+    it('should handle multiple mentions', () => {
+      const result = parseHtmlContent(
+        '<p><a href="https://ap.example/users/did:plc:aaa" class="mention">@alice</a> and <a href="https://ap.example/users/did:plc:bbb" class="mention">@bob</a></p>',
+      )
+      expect(result.text).toBe('@alice and @bob')
+      const mentions = result.links.filter((l) => l.isMention)
+      expect(mentions).toHaveLength(2)
+      expect(mentions[0].textContent).toBe('@alice')
+      expect(mentions[1].textContent).toBe('@bob')
+    })
+
+    it('should distinguish mentions from regular links', () => {
+      const result = parseHtmlContent(
+        '<p><a href="https://ap.example/users/did:plc:abc" class="mention">@alice</a> shared <a href="https://example.com">this link</a></p>',
+      )
+      expect(result.links).toHaveLength(2)
+
+      const mentions = result.links.filter((l) => l.isMention)
+      const regularLinks = result.links.filter((l) => !l.isMention)
+
+      expect(mentions).toHaveLength(1)
+      expect(mentions[0].textContent).toBe('@alice')
+
+      expect(regularLinks).toHaveLength(1)
+      expect(regularLinks[0]).toMatchObject({
+        href: 'https://example.com',
+        textContent: 'this link',
       })
     })
   })
@@ -374,6 +439,202 @@ describe('postConverter', () => {
       expect(result).not.toBeNull()
       expect(result!.value.text).toBe('Bonjour le monde!')
       expect(result!.value.langs).toEqual(['fr'])
+    })
+
+    it('should convert AP mentions to ATProto mention facets for local users', async () => {
+      const federation = createFederation<void>()
+      const ctx = federation.createContext(
+        new URL('https://ap.example'),
+        undefined,
+      )
+
+      // Mock pdsClient to return account for local user
+      const pdsClient = createMockPdsClient({
+        getAccount: async (did: string) => {
+          if (did === testData.users.alice.did) {
+            return { did, handle: testData.users.alice.handle } as any
+          }
+          return null
+        },
+      })
+
+      const note = new Note({
+        id: new URL('https://remote.example/notes/mention1'),
+        content: `<p>Hey <a href="https://ap.example/users/${testData.users.alice.did}" class="mention">@alice</a> check this out!</p>`,
+        published: Temporal.Now.instant(),
+      })
+
+      const result = await postConverter.toRecord(
+        ctx as unknown as Context<void>,
+        testData.users.bob.did,
+        note,
+        { pdsClient: pdsClient as unknown as PDSClient },
+      )
+
+      expect(result).not.toBeNull()
+      expect(result!.value.text).toBe('Hey @alice check this out!')
+      expect(result!.value.facets).toBeDefined()
+      expect(result!.value.facets).toHaveLength(1)
+      expect(result!.value.facets![0].features[0]).toMatchObject({
+        $type: 'app.bsky.richtext.facet#mention',
+        did: testData.users.alice.did,
+      })
+    })
+
+    it('should not create mention facets for non-local users', async () => {
+      const federation = createFederation<void>()
+      const ctx = federation.createContext(
+        new URL('https://ap.example'),
+        undefined,
+      )
+
+      // Mock pdsClient to return null (user not found locally)
+      const pdsClient = createMockPdsClient({
+        getAccount: async () => null,
+      })
+
+      const note = new Note({
+        id: new URL('https://remote.example/notes/mention2'),
+        content: `<p>Hey <a href="https://ap.example/users/did:plc:external" class="mention">@external</a> check this out!</p>`,
+        published: Temporal.Now.instant(),
+      })
+
+      const result = await postConverter.toRecord(
+        ctx as unknown as Context<void>,
+        testData.users.bob.did,
+        note,
+        { pdsClient: pdsClient as unknown as PDSClient },
+      )
+
+      expect(result).not.toBeNull()
+      expect(result!.value.text).toBe('Hey @external check this out!')
+      // No facets should be created for non-local users
+      expect(result!.value.facets).toBeUndefined()
+    })
+  })
+
+  describe('toActivityPub mentions', () => {
+    it('should convert ATProto mention facets to ActivityPub Mention tags', async () => {
+      const federation = createFederation<void>()
+      federation.setActorDispatcher('/users/{identifier}', () => null)
+      federation.setObjectDispatcher(Note, '/posts/{uri}', () => null)
+
+      const ctx = federation.createContext(
+        new URL('https://ap.example'),
+        undefined,
+      )
+
+      // Mock pdsClient to return account for mentioned local user
+      const pdsClient = createMockPdsClient({
+        getAccount: async (did: string) => {
+          if (did === testData.users.bob.did) {
+            return { did, handle: testData.users.bob.handle } as any
+          }
+          return null
+        },
+      })
+
+      const postWithMention: Post = {
+        $type: 'app.bsky.feed.post',
+        text: 'Hello @bob!',
+        createdAt: '2024-01-15T12:00:00.000Z',
+        facets: [
+          {
+            index: { byteStart: 6, byteEnd: 10 },
+            features: [
+              {
+                $type: 'app.bsky.richtext.facet#mention',
+                did: testData.users.bob.did,
+              },
+            ],
+          },
+        ],
+      }
+
+      const record = {
+        uri: 'at://did:plc:alice123/app.bsky.feed.post/mentionpost',
+        cid: 'bafyreimentionpost',
+        value: postWithMention,
+      }
+
+      const result = await postConverter.toActivityPub(
+        ctx as unknown as Context<void>,
+        testData.users.alice.did,
+        record,
+        pdsClient as unknown as PDSClient,
+      )
+
+      expect(result).toBeDefined()
+      const note = result!.object as Note
+
+      // Check that Mention tags were created
+      const tags: Mention[] = []
+      for await (const tag of note.getTags()) {
+        if (tag instanceof Mention) {
+          tags.push(tag)
+        }
+      }
+      expect(tags).toHaveLength(1)
+      expect(tags[0].href?.href).toContain(testData.users.bob.did)
+      expect(tags[0].name?.toString()).toBe('@bob')
+    })
+
+    it('should not include Mention tags for non-local mentioned users', async () => {
+      const federation = createFederation<void>()
+      federation.setActorDispatcher('/users/{identifier}', () => null)
+      federation.setObjectDispatcher(Note, '/posts/{uri}', () => null)
+
+      const ctx = federation.createContext(
+        new URL('https://ap.example'),
+        undefined,
+      )
+
+      // Mock pdsClient to return null (user not local)
+      const pdsClient = createMockPdsClient({
+        getAccount: async () => null,
+      })
+
+      const postWithMention: Post = {
+        $type: 'app.bsky.feed.post',
+        text: 'Hello @external!',
+        createdAt: '2024-01-15T12:00:00.000Z',
+        facets: [
+          {
+            index: { byteStart: 6, byteEnd: 15 },
+            features: [
+              {
+                $type: 'app.bsky.richtext.facet#mention',
+                did: 'did:plc:externaluser',
+              },
+            ],
+          },
+        ],
+      }
+
+      const record = {
+        uri: 'at://did:plc:alice123/app.bsky.feed.post/extmention',
+        cid: 'bafyreiextmention',
+        value: postWithMention,
+      }
+
+      const result = await postConverter.toActivityPub(
+        ctx as unknown as Context<void>,
+        testData.users.alice.did,
+        record,
+        pdsClient as unknown as PDSClient,
+      )
+
+      expect(result).toBeDefined()
+      const note = result!.object as Note
+
+      // No Mention tags should be created for non-local users
+      const tags: Mention[] = []
+      for await (const tag of note.getTags()) {
+        if (tag instanceof Mention) {
+          tags.push(tag)
+        }
+      }
+      expect(tags).toHaveLength(0)
     })
   })
 })

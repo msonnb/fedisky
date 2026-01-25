@@ -1,3 +1,4 @@
+import { RichText, type Facet } from '@atproto/api'
 import {
   isMain as isEmbedImagesOriginal,
   type Main as EmbedImages,
@@ -10,6 +11,10 @@ import type {
   Main as Post,
   ReplyRef,
 } from '@atproto/api/dist/client/types/app/bsky/feed/post'
+import {
+  isMention as isMentionFacet,
+  type Mention as MentionFacet,
+} from '@atproto/api/dist/client/types/app/bsky/richtext/facet'
 import { TID, dataToCborBlock } from '@atproto/common'
 import { BlobRef, lexToIpld } from '@atproto/lexicon'
 import { cborToLex } from '@atproto/repo'
@@ -19,6 +24,7 @@ import {
   Create,
   Document,
   LanguageString,
+  Mention,
   Note,
   PUBLIC_COLLECTION,
 } from '@fedify/fedify'
@@ -33,7 +39,12 @@ import {
   type AttachmentInfo,
   type DownloadedBlob,
 } from './util/blob-handler'
-import { extractLanguage, parseHtmlContent } from './util/html-parser'
+import {
+  type CollectedLink,
+  extractLanguage,
+  parseHtmlContent,
+} from './util/html-parser'
+import { isLocalUser } from './util/is-local-user'
 
 function isEmbedImages(embed: unknown): embed is EmbedImages {
   return isEmbedImagesOriginal(embed)
@@ -41,6 +52,21 @@ function isEmbedImages(embed: unknown): embed is EmbedImages {
 
 function isEmbedVideo(embed: unknown): embed is EmbedVideo {
   return isEmbedVideoOriginal(embed)
+}
+
+/**
+ * Extract text from a string using byte indices.
+ * ATProto facets use UTF-8 byte indices, so we need to convert.
+ */
+function extractTextByByteRange(
+  text: string,
+  byteStart: number,
+  byteEnd: number,
+): string {
+  const encoder = new TextEncoder()
+  const decoder = new TextDecoder()
+  const bytes = encoder.encode(text)
+  return decoder.decode(bytes.slice(byteStart, byteEnd))
 }
 
 export const postConverter: RecordConverter<Post, Note> = {
@@ -51,7 +77,7 @@ export const postConverter: RecordConverter<Post, Note> = {
     const post = record.value
     const apUri = ctx.getObjectUri(Note, { uri: record.uri })
     const to = PUBLIC_COLLECTION
-    const cc = ctx.getFollowersUri(identifier)
+    const ccUris: URL[] = [ctx.getFollowersUri(identifier)]
     const actor = ctx.getActorUri(identifier)
 
     let replyTarget: URL | undefined
@@ -65,10 +91,43 @@ export const postConverter: RecordConverter<Post, Note> = {
       }
     }
 
+    // Extract mentions from ATProto facets and build ActivityPub Mention tags
+    const mentionTags: Mention[] = []
+    if (post.facets) {
+      for (const facet of post.facets) {
+        for (const feature of facet.features) {
+          if (isMentionFacet(feature)) {
+            const mentionFeature = feature as MentionFacet
+            const mentionedDid = mentionFeature.did
+
+            // Only include mentions of local PDS users
+            if (await isLocalUser(pdsClient, mentionedDid)) {
+              const mentionedActorUri = ctx.getActorUri(mentionedDid)
+
+              const mentionText = extractTextByByteRange(
+                post.text,
+                facet.index.byteStart,
+                facet.index.byteEnd,
+              )
+
+              mentionTags.push(
+                new Mention({
+                  href: mentionedActorUri,
+                  name: mentionText,
+                }),
+              )
+
+              ccUris.push(mentionedActorUri)
+            }
+          }
+        }
+      }
+    }
+
     const content = plainTextToHtml(post.text)
     const contents: Array<string | LanguageString> = [content]
-    contents.concat(
-      post.langs?.map((lang) => new LanguageString(content, lang)) ?? [],
+    contents.push(
+      ...(post.langs?.map((lang) => new LanguageString(content, lang)) ?? []),
     )
     const replies = new Collection({
       id: new URL(`${apUri.href}/replies`),
@@ -88,7 +147,7 @@ export const postConverter: RecordConverter<Post, Note> = {
       id: apUri,
       attribution: actor,
       to,
-      cc,
+      ccs: ccUris,
       mediaType: 'text/html',
       published,
       replyTarget,
@@ -97,6 +156,7 @@ export const postConverter: RecordConverter<Post, Note> = {
       shares,
       likes,
       attachments: buildAttachmentsFromEmbed(pdsClient, identifier, post.embed),
+      tags: mentionTags.length > 0 ? mentionTags : undefined,
     })
 
     return {
@@ -109,7 +169,7 @@ export const postConverter: RecordConverter<Post, Note> = {
         actor,
         published,
         to,
-        cc,
+        ccs: ccUris,
         object: note,
       }),
     }
@@ -159,6 +219,14 @@ export const postConverter: RecordConverter<Post, Note> = {
         }
       }
 
+      const linkFacets = buildLinkFacets(text, parsed.links)
+
+      const mentionFacets = await buildMentionFacetsFromLinks(
+        text,
+        parsed.links,
+        options?.pdsClient,
+      )
+
       const published = object.published
       const createdAt = published
         ? published.toString()
@@ -173,9 +241,12 @@ export const postConverter: RecordConverter<Post, Note> = {
       if (parsed.langs.length > 0) {
         record.langs = parsed.langs
       }
-      if (parsed.facets.length > 0) {
-        record.facets = parsed.facets
+
+      const allFacets = [...linkFacets, ...mentionFacets]
+      if (allFacets.length > 0) {
+        record.facets = allFacets
       }
+
       if (embed) {
         record.embed = embed
       }
@@ -375,4 +446,119 @@ function buildAttachmentsFromEmbed(
   }
 
   return attachments
+}
+
+function buildLinkFacets(text: string, links: CollectedLink[]): Facet[] {
+  const richText = new RichText({ text })
+  const facets: Facet[] = []
+  let searchFromIndex = 0
+
+  for (const link of links) {
+    if (link.isMention) {
+      continue
+    }
+
+    const foundIndex = text.indexOf(link.textContent, searchFromIndex)
+    if (foundIndex !== -1) {
+      const byteStart = richText.unicodeText.utf16IndexToUtf8Index(foundIndex)
+      const byteEnd = richText.unicodeText.utf16IndexToUtf8Index(
+        foundIndex + link.textContent.length,
+      )
+
+      facets.push({
+        index: {
+          byteStart,
+          byteEnd,
+        },
+        features: [
+          {
+            $type: 'app.bsky.richtext.facet#link',
+            uri: link.href,
+          },
+        ],
+      })
+
+      searchFromIndex = foundIndex + link.textContent.length
+    }
+  }
+
+  return facets
+}
+
+/**
+ * Parse an ActivityPub actor URL to extract the DID.
+ * Our bridge uses URLs in the format: https://hostname/users/{did}
+ */
+function extractDidFromActorUrl(actorUrl: string): string | null {
+  try {
+    const url = new URL(actorUrl)
+    const pathMatch = url.pathname.match(/^\/users\/(.+)$/)
+    if (pathMatch) {
+      const identifier = pathMatch[1]
+      // Check if it looks like a DID
+      if (identifier.startsWith('did:')) {
+        return identifier
+      }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Build ATProto mention facets from collected links that are mentions.
+ * Only creates facets for mentions that resolve to local PDS users.
+ */
+async function buildMentionFacetsFromLinks(
+  text: string,
+  links: Array<{ href: string; textContent: string; isMention: boolean }>,
+  pdsClient?: PDSClient,
+): Promise<Facet[]> {
+  const mentions = links.filter((link) => link.isMention)
+  if (!pdsClient || mentions.length === 0) {
+    return []
+  }
+
+  const facets: Facet[] = []
+  const richText = new RichText({ text })
+  let searchFromIndex = 0
+
+  for (const mention of mentions) {
+    const did = extractDidFromActorUrl(mention.href)
+    if (!did) {
+      continue
+    }
+
+    if (!(await isLocalUser(pdsClient, did))) {
+      continue
+    }
+
+    const foundIndex = text.indexOf(mention.textContent, searchFromIndex)
+    if (foundIndex === -1) {
+      continue
+    }
+
+    const byteStart = richText.unicodeText.utf16IndexToUtf8Index(foundIndex)
+    const byteEnd = richText.unicodeText.utf16IndexToUtf8Index(
+      foundIndex + mention.textContent.length,
+    )
+
+    facets.push({
+      index: {
+        byteStart,
+        byteEnd,
+      },
+      features: [
+        {
+          $type: 'app.bsky.richtext.facet#mention',
+          did,
+        },
+      ],
+    })
+
+    searchFromIndex = foundIndex + mention.textContent.length
+  }
+
+  return facets
 }
