@@ -1,16 +1,16 @@
-import { RichText, Facet } from '@atproto/api'
 import { LanguageString } from '@fedify/fedify'
 import { convert, type DomNode } from 'html-to-text'
 
 export interface ParsedContent {
   text: string
   langs: string[]
-  facets: Facet[]
+  links: CollectedLink[]
 }
 
-interface CollectedLink {
+export interface CollectedLink {
   href: string
   textContent: string
+  isMention: boolean
 }
 
 function getTextContent(nodes: DomNode[]): string {
@@ -32,6 +32,14 @@ function getTextContent(nodes: DomNode[]): string {
   return text
 }
 
+/**
+ * Check if an anchor element is a mention link.
+ * Mastodon uses class="mention" or "u-url mention" patterns.
+ */
+function isMentionLink(classList: string[]): boolean {
+  return classList.includes('mention')
+}
+
 export function parseHtmlContent(
   html: string,
   language?: string,
@@ -49,6 +57,7 @@ export function parseHtmlContent(
           return
         }
 
+        const classList = (elem.attribs?.class || '').split(/\s+/)
         const textContent = getTextContent(elem.children).trim()
 
         walk(elem.children, builder)
@@ -57,6 +66,7 @@ export function parseHtmlContent(
           collectedLinks.push({
             href,
             textContent,
+            isMention: isMentionLink(classList),
           })
         }
       },
@@ -88,39 +98,10 @@ export function parseHtmlContent(
 
   const trimmedText = text.trim()
 
-  const richText = new RichText({ text: trimmedText })
-  const facets: Facet[] = []
-  let searchFromIndex = 0
-
-  for (const link of collectedLinks) {
-    const foundIndex = trimmedText.indexOf(link.textContent, searchFromIndex)
-    if (foundIndex !== -1) {
-      const byteStart = richText.unicodeText.utf16IndexToUtf8Index(foundIndex)
-      const byteEnd = richText.unicodeText.utf16IndexToUtf8Index(
-        foundIndex + link.textContent.length,
-      )
-
-      facets.push({
-        index: {
-          byteStart,
-          byteEnd,
-        },
-        features: [
-          {
-            $type: 'app.bsky.richtext.facet#link',
-            uri: link.href,
-          },
-        ],
-      })
-
-      searchFromIndex = foundIndex + link.textContent.length
-    }
-  }
-
   return {
     text: trimmedText,
     langs: language ? [language] : [],
-    facets,
+    links: collectedLinks,
   }
 }
 
