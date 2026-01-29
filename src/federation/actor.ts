@@ -63,6 +63,7 @@ export function setupActorDispatcher(ctx: AppContext) {
         )
         return new Person({
           id: fedCtx.getActorUri(identifier),
+          alias: new URL(`at://${account.handle}`),
           name: profile?.displayName,
           summary: profile?.description,
           preferredUsername: account.handle.split('.').at(0),
