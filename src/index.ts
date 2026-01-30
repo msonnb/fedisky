@@ -34,7 +34,7 @@ export class APFederationService {
         {
           category: 'fedify',
           sinks: ['otel', 'console'],
-          lowestLevel: 'error',
+          lowestLevel: 'info',
         },
       ],
       contextLocalStorage: new AsyncLocalStorage(),
