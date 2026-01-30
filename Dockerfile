@@ -22,6 +22,7 @@ COPY --from=build /app /app
 EXPOSE 2588
 ENV AP_PORT=2588
 ENV NODE_ENV=production
+ENV NODE_OPTIONS="--import @opentelemetry/auto-instrumentations-node/register"
 
 CMD ["node", "--enable-source-maps", "index.js"]
 

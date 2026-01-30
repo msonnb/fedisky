@@ -1,4 +1,7 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import http from 'node:http'
+import { configure, getConsoleSink } from '@logtape/logtape'
+import { getOpenTelemetrySink } from '@logtape/otel'
 import express from 'express'
 import { createHttpTerminator, HttpTerminator } from 'http-terminator'
 import { APFederationConfig } from './config'
@@ -25,6 +28,18 @@ export class APFederationService {
   }
 
   static async create(cfg: APFederationConfig): Promise<APFederationService> {
+    await configure({
+      sinks: { console: getConsoleSink(), otel: getOpenTelemetrySink() },
+      loggers: [
+        {
+          category: 'fedify',
+          sinks: ['otel', 'console'],
+          lowestLevel: 'error',
+        },
+      ],
+      contextLocalStorage: new AsyncLocalStorage(),
+    })
+
     const ctx = AppContext.fromConfig(cfg)
     const app = express()
 
