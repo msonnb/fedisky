@@ -18,6 +18,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --build tsconfig.build.json",
+    "start": "node --enable-source-maps entrypoint.js",
     "test": "vitest run --exclude 'e2e-tests/**'",
     "test:watch": "vitest --exclude 'e2e-tests/**'",
     "test:log": "tail -50 test.log | pino-pretty",
