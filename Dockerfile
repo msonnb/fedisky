@@ -24,10 +24,13 @@ ENTRYPOINT ["dumb-init", "--"]
 
 WORKDIR /app
 
+# Copy package files and node_modules from build stage (includes compiled native modules)
 COPY package.json pnpm-lock.yaml .npmrc ./
+COPY --from=build /app/node_modules ./node_modules
 
+# Prune devDependencies to reduce image size
 RUN corepack enable && corepack prepare --activate
-RUN pnpm install --production --frozen-lockfile
+RUN pnpm prune --prod
 
 COPY --from=build /app/dist ./dist
 
