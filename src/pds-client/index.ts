@@ -160,11 +160,20 @@ export class PDSClient {
 
   async getAccountCount(): Promise<number> {
     try {
-      // Use listRepos to estimate account count
-      // This is not efficient but works without adding new endpoints
-      const res = await this.agent.com.atproto.sync.listRepos()
-      // For now return a simple count - in production this would need optimization
-      return res.data.repos.length > 0 ? 1 : 0
+      let cursor: string | undefined = undefined
+      let activeRepoCount = 0
+      do {
+        const res = await this.agent.com.atproto.sync.listRepos({
+          limit: 1000,
+          cursor,
+        })
+        activeRepoCount += res.data.repos.filter((repo) => repo.active).length
+        if (res.data.repos.length < 1000) {
+          break
+        }
+        cursor = res.data.cursor
+      } while (cursor)
+      return activeRepoCount
     } catch (err) {
       apLogger.warn({ err }, 'failed to get account count')
       return 0
