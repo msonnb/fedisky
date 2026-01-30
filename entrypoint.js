@@ -4,8 +4,8 @@ const {
   envToConfig,
   readEnv,
   logger,
-} = require('@msonnb/fedisky')
-const pkg = require('@msonnb/fedisky/package.json')
+} = require('./dist/index.js')
+const pkg = require('./package.json')
 
 const main = async () => {
   const env = readEnv()
