@@ -1,6 +1,6 @@
 import type { Main as Repost } from '@atproto/api/dist/client/types/app/bsky/feed/repost'
 import { AtUri } from '@atproto/syntax'
-import { Announce, Note, PUBLIC_COLLECTION } from '@fedify/fedify'
+import { Announce, Note, PUBLIC_COLLECTION } from '@fedify/vocab'
 import { Temporal } from '@js-temporal/polyfill'
 import { apLogger } from '../logger'
 import { RecordConverter } from './registry'

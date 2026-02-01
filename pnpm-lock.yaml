@@ -30,11 +30,20 @@ importers:
         specifier: ^0.4.2
         version: 0.4.2
       '@fedify/express':
-        specifier: ^1.10.0
-        version: 1.10.0(@fedify/fedify@1.10.0)(express@4.22.1)
+        specifier: 2.0.0-dev.279
+        version: 2.0.0-dev.279(@fedify/fedify@2.0.0-dev.279)(express@4.22.1)
       '@fedify/fedify':
-        specifier: ^1.10.0
-        version: 1.10.0
+        specifier: 2.0.0-dev.279
+        version: 2.0.0-dev.279
+      '@fedify/sqlite':
+        specifier: 2.0.0-dev.279
+        version: 2.0.0-dev.279(@fedify/fedify@2.0.0-dev.279)
+      '@fedify/vocab':
+        specifier: 2.0.0-dev.279
+        version: 2.0.0-dev.279
+      '@fedify/vocab-runtime':
+        specifier: 2.0.0-dev.279
+        version: 2.0.0-dev.279
       '@js-temporal/polyfill':
         specifier: ^0.5.1
         version: 0.5.1
@@ -97,8 +106,8 @@ importers:
         specifier: ^9.39.2
         version: 9.39.2
       '@fedify/testing':
-        specifier: ^1.10.0
-        version: 1.10.0(@fedify/fedify@1.10.0)
+        specifier: 2.0.0-dev.279
+        version: 2.0.0-dev.279(@fedify/fedify@2.0.0-dev.279)
       '@types/better-sqlite3':
         specifier: ^7.6.11
         version: 7.6.13
@@ -497,20 +506,41 @@ packages:
     resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
     engines: {node: '>=14'}
 
-  '@fedify/express@1.10.0':
-    resolution: {integrity: sha512-oVC0FpR3G70L1WhEsENYIea28/6/bmncCSGzXekQGhvt4ZeaYm3i9WKoFT1iT73qozo3cOelMePqQkQ8m9QitQ==}
+  '@fedify/express@2.0.0-dev.279':
+    resolution: {integrity: sha512-kp+oToD+Xep2sjIOk3fd5wS9884cXyI18Xcu0qlI3fm6Sq4BUbFr5peWAS9tKx+uczlSFuJqgiTNxv0EJeylmA==}
     peerDependencies:
-      '@fedify/fedify': ^1.10.0
+      '@fedify/fedify': ^2.0.0-dev.279+ce1bdc22
       express: ^4.0.0
 
-  '@fedify/fedify@1.10.0':
-    resolution: {integrity: sha512-fzkZrVLMJHBpF6/jqaQMe3ZrL++FR2SLHSUosAYtwjY7gzgsvQ/+GGC4qk9FU2qQEVhi2vEYmeQbhg1nVuO36g==}
+  '@fedify/fedify@2.0.0-dev.279':
+    resolution: {integrity: sha512-ksvxcvzy+vE2OVkjQAzgd9EFQLs3f1ulFiFxnUmAV9No5K4XzK+NEpC0ziGtLgk04CTh8mDRsXM/+0W5P0KqOQ==}
     engines: {bun: '>=1.1.0', deno: '>=2.0.0', node: '>=22.0.0'}
 
-  '@fedify/testing@1.10.0':
-    resolution: {integrity: sha512-7K7l+JjHI1AgkN+BFYgU26LfwOfxaVfYUGCgVaC6gzO4OKhCTqHhEuQj/8ODYjrROPnRum4jJqd9rgsfoLvGxg==}
+  '@fedify/sqlite@2.0.0-dev.279':
+    resolution: {integrity: sha512-UJBTuZ4snvznBYaYLia7Dr1NwVzAddu/E+So9rdk2/15U3+/wEXRmbBox2MVlnTYjytH3sGcm5+YPU9q/x4ypg==}
     peerDependencies:
-      '@fedify/fedify': ^1.10.0
+      '@fedify/fedify': ^2.0.0-dev.279+ce1bdc22
+
+  '@fedify/testing@2.0.0-dev.279':
+    resolution: {integrity: sha512-xaKmDssvNqo0ZPmSpRlkPtZWmugoWaKeLnskIP03QsGMthtM+7FFugQNWfZA6m6L9CTm0q46IIul5XO5wD00nQ==}
+    peerDependencies:
+      '@fedify/fedify': ^2.0.0-dev.279+ce1bdc22
+
+  '@fedify/vocab-runtime@2.0.0-dev.279':
+    resolution: {integrity: sha512-ulDNcG4gYV0S2Jgug3kiVJeNJvgAgrdqbxnxlqbr5ju8JBV+BAaCEJBfoQAJX8B8z1z4SGTblHazpZybRAYp7w==}
+    engines: {bun: '>=1.1.0', deno: '>=2.0.0', node: '>=22.0.0'}
+
+  '@fedify/vocab-tools@2.0.0-dev.279':
+    resolution: {integrity: sha512-MpqTh13mkuNKBl/K4cgLyxouCOddHzWZ7uyV0JXbugFB7AWD4q3pRns6IEdMqg8wN8AnnqArhSoCc1MmDDlyhA==}
+    engines: {bun: '>=1.1.0', deno: '>=2.0.0', node: '>=22.0.0'}
+
+  '@fedify/vocab@2.0.0-dev.279':
+    resolution: {integrity: sha512-7Fax70Q+8/afb/lUAyNr1hW2LPrNZHxYijcE0hI3HJEQKKlKHUQzMMOfFsl5jsYsGeJOZT6OIoWCXRkEWjFezA==}
+    engines: {bun: '>=1.1.0', deno: '>=2.0.0', node: '>=22.0.0'}
+
+  '@fedify/webfinger@2.0.0-dev.279':
+    resolution: {integrity: sha512-yjniTDmJBWUP/11/UuZUi1h5a7G8tPeG1oyAHi56LAR7jYftmrCk3hAgpO9tkFePeyIuPTMZzVDtpd00uKIObw==}
+    engines: {bun: '>=1.1.0', deno: '>=2.0.0', node: '>=22.0.0'}
 
   '@grpc/grpc-js@1.14.3':
     resolution: {integrity: sha512-Iq8QQQ/7X3Sac15oB6p0FmUg/klxQvXLeileoqrTRGJYLV+/9tubbr9ipz0GKHjmXVsgFPo/+W+2cA8eNcR+XA==}
@@ -677,9 +707,6 @@ packages:
     resolution: {integrity: sha512-hloP58zRVCRSpgDxmqCWJNlizAlUgJFqG2ypq79DCvyv9tHjRYMDOcPFjzfl/A1/YxDvRCZz8wvZvmapQnKwFQ==}
     engines: {node: '>=12'}
 
-  '@logtape/logtape@1.3.6':
-    resolution: {integrity: sha512-OaK8eal8zcjB0GZbllXKgUC2T9h/GyNLQyQXjJkf1yum7SZKTWs9gs/t8NMS0kVVaSnA7bhU0Sjws/Iy4e0/IQ==}
-
   '@logtape/logtape@2.0.2':
     resolution: {integrity: sha512-cveUBLbCMFkvkLycP/2vNWvywl47JcJbazHIju94/QNGboZ/jyYAgZIm0ZXezAOx3eIz8OG1EOZ5CuQP3+2FQg==}
 
@@ -737,12 +764,6 @@ packages:
   '@opentelemetry/context-async-hooks@2.5.0':
     resolution: {integrity: sha512-uOXpVX0ZjO7heSVjhheW2XEPrhQAWr2BScDPoZ9UDycl5iuHG+Usyc3AIfG6kZeC1GyLpMInpQ6X5+9n69yOFw==}
     engines: {node: ^18.19.0 || >=20.6.0}
-    peerDependencies:
-      '@opentelemetry/api': '>=1.0.0 <1.10.0'
-
-  '@opentelemetry/core@1.30.1':
-    resolution: {integrity: sha512-OOCM2C/QIURhJMuKaekP3TRBxBKxG/TWWA0TL2J6nXUtDnuCtccy49LUJF8xPFXMX+0LMcxFpCo8M9cGY1W6rQ==}
-    engines: {node: '>=14'}
     peerDependencies:
       '@opentelemetry/api': '>=1.0.0 <1.10.0'
 
@@ -1176,12 +1197,6 @@ packages:
     peerDependencies:
       '@opentelemetry/api': ^1.0.0
 
-  '@opentelemetry/resources@1.30.1':
-    resolution: {integrity: sha512-5UxZqiAgLYGFjS4s9qm5mBVo433u+dSPUFWVWXmLAD4wB65oMCoXaJP1KJa9DIYYMeHu3z4BZcStG3LC593cWA==}
-    engines: {node: '>=14'}
-    peerDependencies:
-      '@opentelemetry/api': '>=1.0.0 <1.10.0'
-
   '@opentelemetry/resources@2.2.0':
     resolution: {integrity: sha512-1pNQf/JazQTMA0BiO5NINUzH0cbLbbl7mntLa4aJNmCCXSj0q03T5ZXXL0zw4G55TjdL9Tz32cznGClf+8zr5A==}
     engines: {node: ^18.19.0 || >=20.6.0}
@@ -1224,12 +1239,6 @@ packages:
     peerDependencies:
       '@opentelemetry/api': '>=1.3.0 <1.10.0'
 
-  '@opentelemetry/sdk-trace-base@1.30.1':
-    resolution: {integrity: sha512-jVPgBbH1gCy2Lb7X0AVQ8XAfgg0pJ4nvl8/IiQA6nxOsPvS+0zMJaFSs2ltXe0J6C8dqjcnpyqINDJmU30+uOg==}
-    engines: {node: '>=14'}
-    peerDependencies:
-      '@opentelemetry/api': '>=1.0.0 <1.10.0'
-
   '@opentelemetry/sdk-trace-base@2.2.0':
     resolution: {integrity: sha512-xWQgL0Bmctsalg6PaXExmzdedSp3gyKV8mQBwK/j9VGdCDu2fmXIb2gAehBKbkXCpJ4HPkgv3QfoJWRT4dHWbw==}
     engines: {node: ^18.19.0 || >=20.6.0}
@@ -1248,10 +1257,6 @@ packages:
     peerDependencies:
       '@opentelemetry/api': '>=1.0.0 <1.10.0'
 
-  '@opentelemetry/semantic-conventions@1.28.0':
-    resolution: {integrity: sha512-lp4qAiMTD4sNWW4DbKLBkfiMZ4jbAboJIGOQr5DvciMRI494OapieI9qiODpOt0XBr1LjIDy1xAGAnVs5supTA==}
-    engines: {node: '>=14'}
-
   '@opentelemetry/semantic-conventions@1.38.0':
     resolution: {integrity: sha512-kocjix+/sSggfJhwXqClZ3i9Y/MI0fp7b+g7kCRm6psy2dsf8uApTRclwG18h8Avm7C9+fnt+O36PspJ/OzoWg==}
     engines: {node: '>=14'}
@@ -1261,9 +1266,6 @@ packages:
     engines: {node: ^18.19.0 || >=20.6.0}
     peerDependencies:
       '@opentelemetry/api': ^1.1.0
-
-  '@phensley/language-tag@1.14.0':
-    resolution: {integrity: sha512-FJak93PHAWlleOeAt0JBLplkAy/BhrEhK8zuNX1PHca7I+Pdzj3N1lWZD8ZLmDqlYHIBhHkf6PLOrOcjBD1DHg==}
 
   '@pkgr/core@0.2.9':
     resolution: {integrity: sha512-QNqXyfVS2wm9hweSYD2O7F0G06uurj9kZ96TRQE5Y9hU7+tgdZwIkbAKc5Ocy1HxEY2kuDQa6cQ1WRs/O5LFKA==}
@@ -2235,6 +2237,9 @@ packages:
   es-to-primitive@1.3.0:
     resolution: {integrity: sha512-w+5mJ3GuFL+NjVtJlvydShqE1eN3h3PbI7/5LAsYJP/2qtuMXjfL2LpHSRqo4b4eSF5K/DH1JXKUAHSB2UW50g==}
     engines: {node: '>= 0.4'}
+
+  es-toolkit@1.43.0:
+    resolution: {integrity: sha512-SKCT8AsWvYzBBuUqMk4NPwFlSdqLpJwmy6AP322ERn8W2YLIB6JBXnwMI2Qsh2gfphT3q7EKAxKb23cvFHFwKA==}
 
   es-toolkit@1.44.0:
     resolution: {integrity: sha512-6penXeZalaV88MM3cGkFZZfOoLGWshWWfdy0tWw/RlVVyhvMaWSBTOvXNeiW3e5FwdS5ePW0LGEu17zT139ktg==}
@@ -4340,37 +4345,81 @@ snapshots:
 
   '@fastify/busboy@2.1.1': {}
 
-  '@fedify/express@1.10.0(@fedify/fedify@1.10.0)(express@4.22.1)':
+  '@fedify/express@2.0.0-dev.279(@fedify/fedify@2.0.0-dev.279)(express@4.22.1)':
     dependencies:
-      '@fedify/fedify': 1.10.0
+      '@fedify/fedify': 2.0.0-dev.279
       express: 4.22.1
 
-  '@fedify/fedify@1.10.0':
+  '@fedify/fedify@2.0.0-dev.279':
     dependencies:
-      '@cfworker/json-schema': 4.1.1
+      '@fedify/vocab': 2.0.0-dev.279
+      '@fedify/vocab-runtime': 2.0.0-dev.279
+      '@fedify/webfinger': 2.0.0-dev.279
       '@js-temporal/polyfill': 0.5.1
-      '@logtape/logtape': 1.3.6
-      '@multiformats/base-x': 4.0.1
+      '@logtape/logtape': 2.0.2
       '@opentelemetry/api': 1.9.0
-      '@opentelemetry/core': 1.30.1(@opentelemetry/api@1.9.0)
-      '@opentelemetry/sdk-trace-base': 1.30.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/core': 2.5.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/sdk-trace-base': 2.5.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/semantic-conventions': 1.38.0
-      '@phensley/language-tag': 1.14.0
-      asn1js: 3.0.7
       byte-encodings: 1.0.11
-      es-toolkit: 1.44.0
+      es-toolkit: 1.43.0
       json-canon: 1.0.1
       jsonld: 9.0.0
       multicodec: 3.2.1
-      pkijs: 3.3.3
       structured-field-values: 2.0.4
       uri-template-router: 1.0.0
       url-template: 3.1.1
       urlpattern-polyfill: 10.1.0
 
-  '@fedify/testing@1.10.0(@fedify/fedify@1.10.0)':
+  '@fedify/sqlite@2.0.0-dev.279(@fedify/fedify@2.0.0-dev.279)':
     dependencies:
-      '@fedify/fedify': 1.10.0
+      '@fedify/fedify': 2.0.0-dev.279
+      '@js-temporal/polyfill': 0.5.1
+      '@logtape/logtape': 2.0.2
+      es-toolkit: 1.44.0
+
+  '@fedify/testing@2.0.0-dev.279(@fedify/fedify@2.0.0-dev.279)':
+    dependencies:
+      '@fedify/fedify': 2.0.0-dev.279
+      es-toolkit: 1.43.0
+
+  '@fedify/vocab-runtime@2.0.0-dev.279':
+    dependencies:
+      '@logtape/logtape': 2.0.2
+      '@multiformats/base-x': 4.0.1
+      '@opentelemetry/api': 1.9.0
+      asn1js: 3.0.7
+      byte-encodings: 1.0.11
+      multicodec: 3.2.1
+      pkijs: 3.3.3
+
+  '@fedify/vocab-tools@2.0.0-dev.279':
+    dependencies:
+      '@cfworker/json-schema': 4.1.1
+      byte-encodings: 1.0.11
+      es-toolkit: 1.44.0
+      yaml: 2.8.2
+
+  '@fedify/vocab@2.0.0-dev.279':
+    dependencies:
+      '@fedify/vocab-tools': 2.0.0-dev.279
+      '@fedify/webfinger': 2.0.0-dev.279
+      '@js-temporal/polyfill': 0.5.1
+      '@logtape/logtape': 2.0.2
+      '@multiformats/base-x': 4.0.1
+      '@opentelemetry/api': 1.9.0
+      asn1js: 3.0.7
+      es-toolkit: 1.43.0
+      jsonld: 9.0.0
+      multicodec: 3.2.1
+      pkijs: 3.3.3
+
+  '@fedify/webfinger@2.0.0-dev.279':
+    dependencies:
+      '@fedify/vocab-runtime': 2.0.0-dev.279
+      '@logtape/logtape': 2.0.2
+      '@opentelemetry/api': 1.9.0
+      es-toolkit: 1.43.0
 
   '@grpc/grpc-js@1.14.3':
     dependencies:
@@ -4505,8 +4554,6 @@ snapshots:
     dependencies:
       jsbi: 4.3.2
 
-  '@logtape/logtape@1.3.6': {}
-
   '@logtape/logtape@2.0.2': {}
 
   '@logtape/otel@2.0.2(@logtape/logtape@2.0.2)':
@@ -4617,11 +4664,6 @@ snapshots:
   '@opentelemetry/context-async-hooks@2.5.0(@opentelemetry/api@1.9.0)':
     dependencies:
       '@opentelemetry/api': 1.9.0
-
-  '@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0)':
-    dependencies:
-      '@opentelemetry/api': 1.9.0
-      '@opentelemetry/semantic-conventions': 1.28.0
 
   '@opentelemetry/core@2.2.0(@opentelemetry/api@1.9.0)':
     dependencies:
@@ -5224,12 +5266,6 @@ snapshots:
       - encoding
       - supports-color
 
-  '@opentelemetry/resources@1.30.1(@opentelemetry/api@1.9.0)':
-    dependencies:
-      '@opentelemetry/api': 1.9.0
-      '@opentelemetry/core': 1.30.1(@opentelemetry/api@1.9.0)
-      '@opentelemetry/semantic-conventions': 1.28.0
-
   '@opentelemetry/resources@2.2.0(@opentelemetry/api@1.9.0)':
     dependencies:
       '@opentelemetry/api': 1.9.0
@@ -5298,13 +5334,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0)':
-    dependencies:
-      '@opentelemetry/api': 1.9.0
-      '@opentelemetry/core': 1.30.1(@opentelemetry/api@1.9.0)
-      '@opentelemetry/resources': 1.30.1(@opentelemetry/api@1.9.0)
-      '@opentelemetry/semantic-conventions': 1.28.0
-
   '@opentelemetry/sdk-trace-base@2.2.0(@opentelemetry/api@1.9.0)':
     dependencies:
       '@opentelemetry/api': 1.9.0
@@ -5326,18 +5355,12 @@ snapshots:
       '@opentelemetry/core': 2.5.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/sdk-trace-base': 2.5.0(@opentelemetry/api@1.9.0)
 
-  '@opentelemetry/semantic-conventions@1.28.0': {}
-
   '@opentelemetry/semantic-conventions@1.38.0': {}
 
   '@opentelemetry/sql-common@0.41.2(@opentelemetry/api@1.9.0)':
     dependencies:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/core': 2.5.0(@opentelemetry/api@1.9.0)
-
-  '@phensley/language-tag@1.14.0':
-    dependencies:
-      tslib: 2.8.1
 
   '@pkgr/core@0.2.9': {}
 
@@ -6333,6 +6356,8 @@ snapshots:
       is-callable: 1.2.7
       is-date-object: 1.1.0
       is-symbol: 1.1.1
+
+  es-toolkit@1.43.0: {}
 
   es-toolkit@1.44.0: {}
 

@@ -24,11 +24,11 @@ import {
   Collection,
   Create,
   Document,
-  LanguageString,
   Mention,
   Note,
   PUBLIC_COLLECTION,
-} from '@fedify/fedify'
+} from '@fedify/vocab'
+import { LanguageString } from '@fedify/vocab-runtime'
 import { Temporal } from '@js-temporal/polyfill'
 import escapeHtml from 'escape-html'
 import { apLogger } from '../logger'

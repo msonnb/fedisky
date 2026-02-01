@@ -1,6 +1,6 @@
-import { Accept, Create, Follow, Note, Person, Undo } from '@fedify/fedify'
 import type { InboxContext } from '@fedify/fedify'
 import { createFederation, createInboxContext } from '@fedify/testing'
+import { Accept, Create, Follow, Note, Person, Undo } from '@fedify/vocab'
 import { Temporal } from '@js-temporal/polyfill'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { AppContext } from '../../context'

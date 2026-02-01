@@ -1,15 +1,15 @@
 import { cborDecodeMulti } from '@atproto/common'
 import { AtUri } from '@atproto/syntax'
+import type { Context } from '@fedify/fedify'
 import {
   Activity,
   Announce,
-  Context,
   Delete,
   Like,
   Note,
   PUBLIC_COLLECTION,
   Undo,
-} from '@fedify/fedify'
+} from '@fedify/vocab'
 import { WebSocket } from 'ws'
 import { AppContext } from '../context'
 import type { RecordConverter } from '../conversion'

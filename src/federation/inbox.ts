@@ -1,5 +1,5 @@
 import { AtUri } from '@atproto/syntax'
-import { Accept, Create, Follow, Note, Undo } from '@fedify/fedify'
+import { Accept, Create, Follow, Note, Undo } from '@fedify/vocab'
 import escapeHtml from 'escape-html'
 import { AppContext } from '../context'
 import { postConverter } from '../conversion'

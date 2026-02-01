@@ -2,7 +2,7 @@
  * Test inspection API routes for mock ActivityPub server
  */
 
-import { type Actor, Follow, isActor, lookupObject, Undo } from '@fedify/fedify'
+import { Actor, Follow, Undo, isActor, lookupObject } from '@fedify/vocab'
 import type { Router } from 'express'
 import { Router as createRouter } from 'express'
 import type { Config } from './config'

@@ -1,6 +1,7 @@
 import type { Main as Repost } from '@atproto/api/dist/client/types/app/bsky/feed/repost'
-import { Announce, Note, PUBLIC_COLLECTION, type Context } from '@fedify/fedify'
+import type { Context } from '@fedify/fedify'
 import { createFederation } from '@fedify/testing'
+import { Announce, Note, PUBLIC_COLLECTION } from '@fedify/vocab'
 import { describe, it, expect, vi } from 'vitest'
 import type { PDSClient } from '../../pds-client'
 import { createMockPdsClient, testData } from '../../test-utils'
