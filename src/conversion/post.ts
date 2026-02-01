@@ -16,9 +16,9 @@ import {
   type Mention as MentionFacet,
 } from '@atproto/api/dist/client/types/app/bsky/richtext/facet'
 import { isSelfLabels } from '@atproto/api/dist/client/types/com/atproto/label/defs'
-import { TID, dataToCborBlock } from '@atproto/common'
-import { BlobRef, lexToIpld } from '@atproto/lexicon'
-import { cborToLex } from '@atproto/repo'
+import { TID } from '@atproto/common'
+import { cidForLex, type LexValue } from '@atproto/lex-cbor'
+import { BlobRef } from '@atproto/lexicon'
 import { AtUri } from '@atproto/syntax'
 import {
   Collection,
@@ -305,10 +305,8 @@ export const postConverter: RecordConverter<Post, Note> = {
   },
 }
 
-async function computeRecordCid(record: Post) {
-  const block = await dataToCborBlock(lexToIpld(record))
-  cborToLex(block.bytes)
-  return block.cid
+function computeRecordCid(record: Post) {
+  return cidForLex(record as unknown as LexValue)
 }
 
 async function extractAttachments(note: Note): Promise<AttachmentInfo[]> {
