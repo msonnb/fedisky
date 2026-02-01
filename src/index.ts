@@ -63,7 +63,7 @@ export class APFederationService {
     const ctx = AppContext.fromConfig(cfg)
     const app = express()
 
-    app.set('trust proxy', true)
+    app.set('trust proxy', 1)
     app.use(helmet())
     app.use(express.json({ limit: '256kb' }))
     app.use(express.urlencoded({ extended: true, limit: '256kb' }))
