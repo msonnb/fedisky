@@ -34,6 +34,7 @@
     "@atproto/api": "^0.18.16",
     "@atproto/bsky": "^0.0.210",
     "@atproto/common": "^0.5.8",
+    "@atproto/lex-cbor": "^0.0.10",
     "@atproto/lexicon": "^0.6.0",
     "@atproto/repo": "^0.8.12",
     "@atproto/syntax": "^0.4.2",
