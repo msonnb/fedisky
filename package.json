@@ -40,6 +40,7 @@
     "@atproto/syntax": "^0.4.2",
     "@fedify/express": "^1.10.0",
     "@fedify/fedify": "^1.10.0",
+    "@fedify/sqlite": "^1.10.3",
     "@js-temporal/polyfill": "^0.5.1",
     "@logtape/logtape": "^2.0.2",
     "@logtape/otel": "^2.0.2",

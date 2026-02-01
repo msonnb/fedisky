@@ -1,8 +1,6 @@
-import {
-  createFederation,
-  type Federation,
-  MemoryKvStore,
-} from '@fedify/fedify'
+import { SqliteKvStore } from '@fedify/sqlite'
+import { createFederation, type Federation } from '@fedify/fedify'
+import { DatabaseSync } from 'node:sqlite'
 import { BridgeAccountManager } from './bridge-account'
 import { APFederationConfig } from './config'
 import { APDatabase } from './db'
@@ -39,8 +37,10 @@ export class AppContext {
     const db = new APDatabase(cfg.db.location)
     const pdsClient = new PDSClient(cfg)
     const bridgeAccount = new BridgeAccountManager(cfg, db, pdsClient)
+    const kvDbPath = cfg.db.location.replace(/\.sqlite$/, '-kv.sqlite')
+    const kvDb = new DatabaseSync(kvDbPath)
     const federation = createFederation<void>({
-      kv: new MemoryKvStore(),
+      kv: new SqliteKvStore(kvDb),
       allowPrivateAddress: cfg.allowPrivateAddress,
     })
     return new AppContext({
