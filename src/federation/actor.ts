@@ -1,4 +1,5 @@
 import { BlobRef } from '@atproto/lexicon'
+import { ensureValidDid } from '@atproto/syntax'
 import {
   Endpoints,
   exportJwk,
@@ -14,8 +15,11 @@ export function setupActorDispatcher(ctx: AppContext) {
   ctx.federation
     .setActorDispatcher(`/users/{+identifier}`, async (fedCtx, identifier) => {
       try {
-        if (identifier.includes('/')) {
-          apLogger.debug({ identifier }, 'invalid actor identifier contains /')
+        // Validate DID format using ATProto syntax validation
+        try {
+          ensureValidDid(identifier)
+        } catch {
+          apLogger.debug({ identifier }, 'invalid DID format')
           return null
         }
 
