@@ -121,7 +121,7 @@ export class PDSClient {
       if (isNotFoundError(err)) {
         return null
       }
-      apLogger.warn({ err, handle }, 'failed to resolve handle')
+      apLogger.warn('failed to resolve handle: {handle} {err}', { err, handle })
       return null
     }
   }
@@ -136,7 +136,7 @@ export class PDSClient {
       if (isNotFoundError(err)) {
         return null
       }
-      apLogger.warn({ err, did }, 'failed to get account')
+      apLogger.warn('failed to get account: {did} {err}', { err, did })
       throw err
     }
   }
@@ -175,7 +175,7 @@ export class PDSClient {
       } while (cursor)
       return activeRepoCount
     } catch (err) {
-      apLogger.warn({ err }, 'failed to get account count')
+      apLogger.warn('failed to get account count: {err}', { err })
       return 0
     }
   }
@@ -192,7 +192,7 @@ export class PDSClient {
       if (isNotFoundError(err)) {
         return null
       }
-      apLogger.warn({ err, did }, 'failed to get profile')
+      apLogger.warn('failed to get profile: {did} {err}', { err, did })
       return null
     }
   }

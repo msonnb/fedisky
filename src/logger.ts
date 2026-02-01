@@ -1,4 +1,4 @@
-import { subsystemLogger } from '@atproto/common'
+import { getLogger } from '@logtape/logtape'
 
-export const logger = subsystemLogger('activitypub')
-export const apLogger = subsystemLogger('activitypub:federation')
+export const logger = getLogger(['fedisky'])
+export const apLogger = getLogger(['fedisky', 'federation'])

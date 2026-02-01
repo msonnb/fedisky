@@ -15,8 +15,12 @@ export function setupFollowersDispatcher(ctx: AppContext) {
           })
 
           apLogger.debug(
-            { identifier, followersCount: follows.length, cursor },
-            'dispatching followers',
+            'dispatching followers: {identifier} {followersCount} items, cursor={cursor}',
+            {
+              identifier,
+              followersCount: follows.length,
+              cursor,
+            },
           )
           return {
             items: follows.map((follow) => ({
@@ -27,8 +31,12 @@ export function setupFollowersDispatcher(ctx: AppContext) {
           }
         } catch (err) {
           apLogger.warn(
-            { err, identifier, cursor },
-            'failed to dispatch followers',
+            'failed to dispatch followers: {identifier} {cursor} {err}',
+            {
+              err,
+              identifier,
+              cursor,
+            },
           )
           return { items: [], nextCursor: null }
         }
@@ -38,7 +46,10 @@ export function setupFollowersDispatcher(ctx: AppContext) {
       try {
         return await ctx.db.getFollowsCount(identifier)
       } catch (err) {
-        apLogger.warn({ err, identifier }, 'failed to count followers')
+        apLogger.warn('failed to count followers: {identifier} {err}', {
+          err,
+          identifier,
+        })
         return 0
       }
     })

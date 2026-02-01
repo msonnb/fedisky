@@ -20,8 +20,12 @@ export const likeConverter: RecordConverter<LikeRecord, Note> = {
     const isLocalPost = await isLocalUser(pdsClient, subjectDid)
     if (!isLocalPost) {
       apLogger.debug(
-        { likeUri: record.uri, subjectUri, subjectDid },
-        'skipping like of external post (not on this PDS)',
+        'skipping like of external post (not on this PDS): {likeUri} {subjectUri} {subjectDid}',
+        {
+          likeUri: record.uri,
+          subjectUri,
+          subjectDid,
+        },
       )
       return null
     }
@@ -46,12 +50,12 @@ export const likeConverter: RecordConverter<LikeRecord, Note> = {
     })
 
     apLogger.debug(
+      'converted like to Like activity: {likeUri} {subjectUri} {likeId}',
       {
         likeUri: record.uri,
         subjectUri,
         likeId: likeId.href,
       },
-      'converted like to Like activity',
     )
 
     return {

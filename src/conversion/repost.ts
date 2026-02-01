@@ -20,8 +20,12 @@ export const repostConverter: RecordConverter<Repost, Note> = {
     const isLocalPost = await isLocalUser(pdsClient, subjectDid)
     if (!isLocalPost) {
       apLogger.debug(
-        { repostUri: record.uri, subjectUri, subjectDid },
-        'skipping repost of external post (not on this PDS)',
+        'skipping repost of external post (not on this PDS): {repostUri} {subjectUri} {subjectDid}',
+        {
+          repostUri: record.uri,
+          subjectUri,
+          subjectDid,
+        },
       )
       return null
     }
@@ -46,12 +50,12 @@ export const repostConverter: RecordConverter<Repost, Note> = {
     })
 
     apLogger.debug(
+      'converted repost to Announce activity: {repostUri} {subjectUri} {announceId}',
       {
         repostUri: record.uri,
         subjectUri,
         announceId: announceId.href,
       },
-      'converted repost to Announce activity',
     )
 
     return {

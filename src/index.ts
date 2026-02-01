@@ -11,6 +11,7 @@ import { AppContext } from './context'
 import { createRouter } from './federation'
 import { FirehoseProcessor } from './firehose'
 import { logger } from './logger'
+import { trace } from '@opentelemetry/api'
 
 export * from './config'
 export { AppContext } from './context'
@@ -31,11 +32,28 @@ export class APFederationService {
 
   static async create(cfg: APFederationConfig): Promise<APFederationService> {
     await configure({
-      sinks: { console: getConsoleSink(), otel: getOpenTelemetrySink() },
+      sinks: {
+        console: getConsoleSink(),
+        otel: getOpenTelemetrySink(),
+        recordException: (logRecord) => {
+          if (
+            logRecord.level === 'error' &&
+            'err' in logRecord.properties &&
+            logRecord.properties.err instanceof Error
+          ) {
+            trace.getActiveSpan()?.recordException(logRecord.properties.err)
+          }
+        },
+      },
       loggers: [
         {
           category: 'fedify',
-          sinks: ['otel', 'console'],
+          sinks: ['otel', 'console', 'recordException'],
+          lowestLevel: 'info',
+        },
+        {
+          category: 'fedisky',
+          sinks: ['otel', 'console', 'recordException'],
           lowestLevel: 'info',
         },
       ],
@@ -74,13 +92,13 @@ export class APFederationService {
       res.on('finish', () => {
         const duration = Date.now() - start
         logger.debug(
+          'request completed: {method} {url} {status} {duration}ms',
           {
             method: req.method,
             url: req.url,
             status: res.statusCode,
             duration,
           },
-          'request completed',
         )
       })
       next()
@@ -100,7 +118,10 @@ export class APFederationService {
         res: express.Response,
         _next: express.NextFunction,
       ) => {
-        logger.error({ err, path: req.path }, 'unhandled error')
+        logger.error('unhandled error at {path}: {err}', {
+          err,
+          path: req.path,
+        })
         res.status(500).json({ error: 'Internal server error' })
       },
     )
@@ -114,13 +135,10 @@ export class APFederationService {
 
     await this.ctx.bridgeAccount.initialize()
     if (this.ctx.bridgeAccount.isAvailable()) {
-      logger.info(
-        {
-          did: this.ctx.bridgeAccount.did,
-          handle: this.ctx.bridgeAccount.handle,
-        },
-        'bridge account initialized',
-      )
+      logger.info('bridge account initialized: {did} {handle}', {
+        did: this.ctx.bridgeAccount.did,
+        handle: this.ctx.bridgeAccount.handle,
+      })
     } else {
       logger.warn(
         'bridge account not available - incoming ActivityPub replies will be disabled',
@@ -129,7 +147,9 @@ export class APFederationService {
 
     const port = this.ctx.cfg.service.port
     this.server = this.app.listen(port, () => {
-      logger.info({ port }, 'ActivityPub federation service started')
+      logger.info('ActivityPub federation service started on port {port}', {
+        port,
+      })
     })
 
     this.terminator = createHttpTerminator({ server: this.server })
