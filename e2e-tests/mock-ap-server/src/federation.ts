@@ -3,19 +3,21 @@
  */
 
 import {
+  createFederation,
+  type Federation,
+  generateCryptoKeyPair,
+  MemoryKvStore,
+  type KvStore,
+} from '@fedify/fedify'
+import {
   Accept,
   Create,
-  createFederation,
   Delete,
-  type Federation,
   Follow,
-  generateCryptoKeyPair,
-  type KvStore,
-  MemoryKvStore,
   Note,
   Person,
   Undo,
-} from '@fedify/fedify'
+} from '@fedify/vocab'
 import type { Config } from './config'
 import {
   addFollower,

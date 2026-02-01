@@ -1,6 +1,6 @@
 import type { Main as LikeRecord } from '@atproto/api/dist/client/types/app/bsky/feed/like'
 import { AtUri } from '@atproto/syntax'
-import { Like, Note, PUBLIC_COLLECTION } from '@fedify/fedify'
+import { Like, Note, PUBLIC_COLLECTION } from '@fedify/vocab'
 import { Temporal } from '@js-temporal/polyfill'
 import { apLogger } from '../logger'
 import { RecordConverter } from './registry'

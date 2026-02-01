@@ -1,5 +1,5 @@
-import { Announce, Delete, Note, PUBLIC_COLLECTION, Undo } from '@fedify/fedify'
 import { createFederation } from '@fedify/testing'
+import { Announce, Delete, Note, PUBLIC_COLLECTION, Undo } from '@fedify/vocab'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { AppContext } from '../../context'
 import type { APDatabase } from '../../db'

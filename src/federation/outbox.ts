@@ -1,5 +1,5 @@
 import { AtUri } from '@atproto/syntax'
-import { Note } from '@fedify/fedify'
+import { Note } from '@fedify/vocab'
 import { AppContext } from '../context'
 import {
   RecordConverterRegistry,

@@ -1,5 +1,6 @@
 import { BlobRef } from '@atproto/api'
-import type { Activity, Object as APObject, Context } from '@fedify/fedify'
+import type { Context } from '@fedify/fedify'
+import type { Activity, Object as APObject } from '@fedify/vocab'
 import type { APDatabase } from '../db'
 import { PDSClient } from '../pds-client'
 

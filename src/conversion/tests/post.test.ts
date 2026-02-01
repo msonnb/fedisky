@@ -1,12 +1,8 @@
 import type { Main as Post } from '@atproto/api/dist/client/types/app/bsky/feed/post'
-import {
-  LanguageString,
-  Mention,
-  Note,
-  Document,
-  type Context,
-} from '@fedify/fedify'
+import type { Context } from '@fedify/fedify'
 import { createFederation } from '@fedify/testing'
+import { Mention, Note, Document } from '@fedify/vocab'
+import { LanguageString } from '@fedify/vocab-runtime'
 import { Temporal } from '@js-temporal/polyfill'
 import { describe, it, expect } from 'vitest'
 import type { PDSClient } from '../../pds-client'

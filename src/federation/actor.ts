@@ -1,13 +1,7 @@
 import { BlobRef } from '@atproto/lexicon'
 import { ensureValidDid } from '@atproto/syntax'
-import {
-  Endpoints,
-  exportJwk,
-  generateCryptoKeyPair,
-  Image,
-  importJwk,
-  Person,
-} from '@fedify/fedify'
+import { exportJwk, generateCryptoKeyPair, importJwk } from '@fedify/fedify'
+import { Endpoints, Image, Person } from '@fedify/vocab'
 import { AppContext } from '../context'
 import { apLogger } from '../logger'
 

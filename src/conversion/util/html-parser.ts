@@ -1,4 +1,4 @@
-import { LanguageString } from '@fedify/fedify'
+import { LanguageString } from '@fedify/vocab-runtime'
 import { convert, type DomNode } from 'html-to-text'
 
 export interface ParsedContent {
@@ -114,7 +114,7 @@ export function extractLanguage(content: string | LanguageString): {
   }
 
   const text = content.toString()
-  const language = content.language.toString()
+  const language = content.locale.language
 
   return { text, language }
 }
