@@ -4,7 +4,6 @@ import { APFederationConfig } from '../config'
 import { APDatabase } from '../db'
 import { apLogger } from '../logger'
 import { PDSClient } from '../pds-client'
-import { trace } from '@opentelemetry/api'
 
 export class BridgeAccountManager {
   private cfg: APFederationConfig
