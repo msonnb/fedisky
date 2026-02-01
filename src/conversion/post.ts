@@ -30,6 +30,7 @@ import {
   PUBLIC_COLLECTION,
 } from '@fedify/fedify'
 import { Temporal } from '@js-temporal/polyfill'
+import escapeHtml from 'escape-html'
 import { apLogger } from '../logger'
 import { PDSClient } from '../pds-client'
 import { RecordConverter } from './registry'
@@ -421,7 +422,9 @@ async function parseReplyTarget(
 
 function plainTextToHtml(text: string): string {
   const paragraphs = text.split('\n\n')
-  return paragraphs.map((paragraph) => `<p>${paragraph}</p>`).join('\n')
+  return paragraphs
+    .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+    .join('\n')
 }
 
 function buildAttachmentsFromEmbed(

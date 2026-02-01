@@ -3,6 +3,8 @@ import http from 'node:http'
 import { configure, getConsoleSink } from '@logtape/logtape'
 import { getOpenTelemetrySink } from '@logtape/otel'
 import express from 'express'
+import { rateLimit } from 'express-rate-limit'
+import helmet from 'helmet'
 import { createHttpTerminator, HttpTerminator } from 'http-terminator'
 import { APFederationConfig } from './config'
 import { AppContext } from './context'
@@ -44,8 +46,28 @@ export class APFederationService {
     const app = express()
 
     app.set('trust proxy', true)
-    app.use(express.json())
-    app.use(express.urlencoded({ extended: true }))
+    app.use(helmet())
+    app.use(express.json({ limit: '256kb' }))
+    app.use(express.urlencoded({ extended: true, limit: '256kb' }))
+
+    const generalLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      limit: 1000,
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
+    })
+
+    const inboxLimiter = rateLimit({
+      windowMs: 60 * 1000, // 1 minute
+      limit: 100, // 100 requests per minute per IP
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
+      message: { error: 'Too many requests' },
+    })
+
+    app.use(generalLimiter)
+    app.use('/inbox', inboxLimiter)
+    app.use('/users/*/inbox', inboxLimiter)
 
     app.use((req, res, next) => {
       const start = Date.now()

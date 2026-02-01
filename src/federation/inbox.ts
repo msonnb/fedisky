@@ -1,8 +1,21 @@
 import { AtUri } from '@atproto/syntax'
 import { Accept, Create, Follow, Note, Undo } from '@fedify/fedify'
+import escapeHtml from 'escape-html'
 import { AppContext } from '../context'
 import { postConverter } from '../conversion'
 import { apLogger } from '../logger'
+
+/**
+ * Validate URL scheme (reject javascript:, data:, etc.)
+ */
+function isSafeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:'
+  } catch {
+    return false
+  }
+}
 
 export function setupInboxListeners(ctx: AppContext) {
   ctx.federation
@@ -188,9 +201,11 @@ export function setupInboxListeners(ctx: AppContext) {
 
         // Build attribution prefix as HTML with a link to the author's profile
         const originalContent = object.content ?? ''
-        const actorLink = actorProfileUrl
-          ? `<a href="${actorProfileUrl}">${actorHandle}</a>`
-          : actorHandle
+        const safeHandle = escapeHtml(actorHandle)
+        const actorLink =
+          actorProfileUrl && isSafeUrl(actorProfileUrl)
+            ? `<a href="${escapeHtml(actorProfileUrl)}">${safeHandle}</a>`
+            : safeHandle
         const replyPrefixHtml = `<p>${actorLink} replied:</p>`
         const modifiedNote = new Note({
           id: object.id,
