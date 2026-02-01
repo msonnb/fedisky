@@ -28,7 +28,6 @@ import {
   Note,
   PUBLIC_COLLECTION,
 } from '@fedify/vocab'
-import { LanguageString } from '@fedify/vocab-runtime'
 import { Temporal } from '@js-temporal/polyfill'
 import escapeHtml from 'escape-html'
 import { apLogger } from '../logger'
@@ -131,10 +130,10 @@ export const postConverter: RecordConverter<Post, Note> = {
     }
 
     const content = plainTextToHtml(post.text)
-    const contents: Array<string | LanguageString> = [content]
-    contents.push(
-      ...(post.langs?.map((lang) => new LanguageString(content, lang)) ?? []),
-    )
+    // TODO: Re-enable LanguageString once Fedify fixes the bug where
+    // @fedify/vocab bundles its own LanguageString class instead of
+    // using the one from @fedify/vocab-runtime (instanceof check fails).
+    const contents: Array<string> = [content]
     const replies = new Collection({
       id: new URL(`${apUri.href}/replies`),
       totalItems: 0,
