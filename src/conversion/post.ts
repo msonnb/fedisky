@@ -15,6 +15,7 @@ import {
   isMention as isMentionFacet,
   type Mention as MentionFacet,
 } from '@atproto/api/dist/client/types/app/bsky/richtext/facet'
+import { isSelfLabels } from '@atproto/api/dist/client/types/com/atproto/label/defs'
 import { TID, dataToCborBlock } from '@atproto/common'
 import { BlobRef, lexToIpld } from '@atproto/lexicon'
 import { cborToLex } from '@atproto/repo'
@@ -45,6 +46,10 @@ import {
   parseHtmlContent,
 } from './util/html-parser'
 import { isLocalUser } from './util/is-local-user'
+import {
+  contentWarningToLabels,
+  labelsToContentWarning,
+} from './util/label-mapping'
 
 function isEmbedImages(embed: unknown): embed is EmbedImages {
   return isEmbedImagesOriginal(embed)
@@ -143,6 +148,16 @@ export const postConverter: RecordConverter<Post, Note> = {
     })
     const published = Temporal.Instant.from(post.createdAt)
 
+    let sensitive: boolean | undefined
+    let summary: string | undefined
+    if (post.labels && isSelfLabels(post.labels)) {
+      const cw = labelsToContentWarning(post.labels)
+      if (cw) {
+        sensitive = cw.sensitive
+        summary = cw.summary
+      }
+    }
+
     const note = new Note({
       id: apUri,
       attribution: actor,
@@ -157,6 +172,8 @@ export const postConverter: RecordConverter<Post, Note> = {
       likes,
       attachments: buildAttachmentsFromEmbed(pdsClient, identifier, post.embed),
       tags: mentionTags.length > 0 ? mentionTags : undefined,
+      sensitive,
+      summary,
     })
 
     return {
@@ -252,6 +269,15 @@ export const postConverter: RecordConverter<Post, Note> = {
       }
       if (reply) {
         record.reply = reply
+      }
+
+      const summary = object.summary?.toString()
+      const sensitive = object.sensitive ?? false
+      if (summary || sensitive) {
+        const labels = contentWarningToLabels(summary, sensitive)
+        if (labels) {
+          record.labels = labels
+        }
       }
 
       const cid = await computeRecordCid(record)

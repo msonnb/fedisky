@@ -637,4 +637,228 @@ describe('postConverter', () => {
       expect(tags).toHaveLength(0)
     })
   })
+
+  describe('content warnings / self-labels', () => {
+    it('should convert post with sexual label to Note with summary and sensitive', async () => {
+      const federation = createFederation<void>()
+      federation.setActorDispatcher('/users/{identifier}', () => null)
+      federation.setObjectDispatcher(Note, '/posts/{uri}', () => null)
+
+      const ctx = federation.createContext(
+        new URL('https://ap.example'),
+        undefined,
+      )
+      const pdsClient = createMockPdsClient()
+
+      const postWithLabel: Post = {
+        $type: 'app.bsky.feed.post',
+        text: 'This is sensitive content',
+        createdAt: '2024-01-15T12:00:00.000Z',
+        labels: {
+          $type: 'com.atproto.label.defs#selfLabels',
+          values: [{ val: 'sexual' }],
+        },
+      }
+
+      const record = {
+        uri: 'at://did:plc:alice123/app.bsky.feed.post/labeledpost',
+        cid: 'bafyreilabeledpost',
+        value: postWithLabel,
+      }
+
+      const result = await postConverter.toActivityPub(
+        ctx as unknown as Context<void>,
+        testData.users.alice.did,
+        record,
+        pdsClient as unknown as PDSClient,
+      )
+
+      expect(result).toBeDefined()
+      const note = result!.object as Note
+      expect(note.sensitive).toBe(true)
+      expect(note.summary?.toString()).toBe('Sexual Content')
+    })
+
+    it('should convert post with multiple labels to combined summary', async () => {
+      const federation = createFederation<void>()
+      federation.setActorDispatcher('/users/{identifier}', () => null)
+      federation.setObjectDispatcher(Note, '/posts/{uri}', () => null)
+
+      const ctx = federation.createContext(
+        new URL('https://ap.example'),
+        undefined,
+      )
+      const pdsClient = createMockPdsClient()
+
+      const postWithLabels: Post = {
+        $type: 'app.bsky.feed.post',
+        text: 'Multiple content warnings',
+        createdAt: '2024-01-15T12:00:00.000Z',
+        labels: {
+          $type: 'com.atproto.label.defs#selfLabels',
+          values: [{ val: 'nudity' }, { val: 'graphic-media' }],
+        },
+      }
+
+      const record = {
+        uri: 'at://did:plc:alice123/app.bsky.feed.post/multilabel',
+        cid: 'bafyreimultilabel',
+        value: postWithLabels,
+      }
+
+      const result = await postConverter.toActivityPub(
+        ctx as unknown as Context<void>,
+        testData.users.alice.did,
+        record,
+        pdsClient as unknown as PDSClient,
+      )
+
+      expect(result).toBeDefined()
+      const note = result!.object as Note
+      expect(note.sensitive).toBe(true)
+      expect(note.summary?.toString()).toBe(
+        'Nudity, Graphic Media (Violence/Gore)',
+      )
+    })
+
+    it('should not set sensitive for post without labels', async () => {
+      const federation = createFederation<void>()
+      federation.setActorDispatcher('/users/{identifier}', () => null)
+      federation.setObjectDispatcher(Note, '/posts/{uri}', () => null)
+
+      const ctx = federation.createContext(
+        new URL('https://ap.example'),
+        undefined,
+      )
+      const pdsClient = createMockPdsClient()
+
+      const record = {
+        uri: testData.posts.simple.uri,
+        cid: testData.posts.simple.cid,
+        value: testData.posts.simple.value as Post,
+      }
+
+      const result = await postConverter.toActivityPub(
+        ctx as unknown as Context<void>,
+        testData.users.alice.did,
+        record,
+        pdsClient as unknown as PDSClient,
+      )
+
+      expect(result).toBeDefined()
+      const note = result!.object as Note
+      // Fedify returns null for unset properties
+      expect(note.sensitive).toBeFalsy()
+      expect(note.summary).toBeFalsy()
+    })
+
+    it('should convert Note with NSFW summary to post with sexual label', async () => {
+      const federation = createFederation<void>()
+      const ctx = federation.createContext(
+        new URL('https://ap.example'),
+        undefined,
+      )
+
+      const note = new Note({
+        id: new URL('https://remote.example/notes/nsfw'),
+        content: '<p>Some adult content</p>',
+        summary: 'NSFW',
+        sensitive: true,
+        published: Temporal.Now.instant(),
+      })
+
+      const result = await postConverter.toRecord(
+        ctx as unknown as Context<void>,
+        testData.users.alice.did,
+        note,
+      )
+
+      expect(result).not.toBeNull()
+      expect(result!.value.labels).toBeDefined()
+      expect(result!.value.labels).toEqual({
+        $type: 'com.atproto.label.defs#selfLabels',
+        values: [{ $type: 'com.atproto.label.defs#selfLabel', val: 'sexual' }],
+      })
+    })
+
+    it('should convert Note with nudity CW to post with nudity label', async () => {
+      const federation = createFederation<void>()
+      const ctx = federation.createContext(
+        new URL('https://ap.example'),
+        undefined,
+      )
+
+      const note = new Note({
+        id: new URL('https://remote.example/notes/nude'),
+        content: '<p>Art with nudity</p>',
+        summary: 'CW: nudity',
+        sensitive: true,
+        published: Temporal.Now.instant(),
+      })
+
+      const result = await postConverter.toRecord(
+        ctx as unknown as Context<void>,
+        testData.users.alice.did,
+        note,
+      )
+
+      expect(result).not.toBeNull()
+      expect(result!.value.labels).toBeDefined()
+      expect(result!.value.labels).toEqual({
+        $type: 'com.atproto.label.defs#selfLabels',
+        values: [{ $type: 'com.atproto.label.defs#selfLabel', val: 'nudity' }],
+      })
+    })
+
+    it('should default to sexual label when sensitive=true but no keyword match', async () => {
+      const federation = createFederation<void>()
+      const ctx = federation.createContext(
+        new URL('https://ap.example'),
+        undefined,
+      )
+
+      const note = new Note({
+        id: new URL('https://remote.example/notes/sensitive'),
+        content: '<p>Something marked sensitive</p>',
+        summary: 'spoiler alert',
+        sensitive: true,
+        published: Temporal.Now.instant(),
+      })
+
+      const result = await postConverter.toRecord(
+        ctx as unknown as Context<void>,
+        testData.users.alice.did,
+        note,
+      )
+
+      expect(result).not.toBeNull()
+      expect(result!.value.labels).toEqual({
+        $type: 'com.atproto.label.defs#selfLabels',
+        values: [{ $type: 'com.atproto.label.defs#selfLabel', val: 'sexual' }],
+      })
+    })
+
+    it('should not add labels for Note without summary or sensitive flag', async () => {
+      const federation = createFederation<void>()
+      const ctx = federation.createContext(
+        new URL('https://ap.example'),
+        undefined,
+      )
+
+      const note = new Note({
+        id: new URL('https://remote.example/notes/plain'),
+        content: '<p>Just a normal post</p>',
+        published: Temporal.Now.instant(),
+      })
+
+      const result = await postConverter.toRecord(
+        ctx as unknown as Context<void>,
+        testData.users.alice.did,
+        note,
+      )
+
+      expect(result).not.toBeNull()
+      expect(result!.value.labels).toBeUndefined()
+    })
+  })
 })
