@@ -19,7 +19,7 @@ export function setupActorDispatcher(ctx: AppContext) {
         try {
           ensureValidDid(identifier)
         } catch {
-          apLogger.debug({ identifier }, 'invalid DID format')
+          apLogger.debug('invalid DID format: {identifier}', { identifier })
           return null
         }
 
@@ -29,15 +29,19 @@ export function setupActorDispatcher(ctx: AppContext) {
           identifier === ctx.bridgeAccount.did
         ) {
           apLogger.debug(
-            { identifier },
-            'hiding bridge account from actor dispatcher',
+            'hiding bridge account from actor dispatcher: {identifier}',
+            {
+              identifier,
+            },
           )
           return null
         }
 
         const account = await ctx.pdsClient.getAccount(identifier)
         if (!account || !account.handle) {
-          apLogger.debug({ identifier }, 'actor not found or missing handle')
+          apLogger.debug('actor not found or missing handle: {identifier}', {
+            identifier,
+          })
           return null
         }
 
@@ -61,10 +65,10 @@ export function setupActorDispatcher(ctx: AppContext) {
           : undefined
 
         const keyPairs = await fedCtx.getActorKeyPairs(identifier)
-        apLogger.debug(
-          { identifier, handle: account.handle },
-          'dispatching actor',
-        )
+        apLogger.debug('dispatching actor: {identifier} {handle}', {
+          identifier,
+          handle: account.handle,
+        })
         return new Person({
           id: fedCtx.getActorUri(identifier),
           alias: new URL(`at://${encodeURIComponent(account.did)}`),
@@ -95,7 +99,10 @@ export function setupActorDispatcher(ctx: AppContext) {
           assertionMethods: keyPairs.map((keyPair) => keyPair.multikey),
         })
       } catch (err) {
-        apLogger.warn({ err, identifier }, 'failed to dispatch actor')
+        apLogger.warn('failed to dispatch actor: {identifier} {err}', {
+          err,
+          identifier,
+        })
         return null
       }
     })
@@ -110,8 +117,11 @@ export function setupActorDispatcher(ctx: AppContext) {
           username === ctx.cfg.bridge.handle
         ) {
           apLogger.debug(
-            { username, handle },
-            'hiding bridge account from handle mapping',
+            'hiding bridge account from handle mapping: {username} {handle}',
+            {
+              username,
+              handle,
+            },
           )
           return null
         }
@@ -119,8 +129,11 @@ export function setupActorDispatcher(ctx: AppContext) {
         const did = await ctx.pdsClient.resolveHandle(handle)
         if (!did) {
           apLogger.debug(
-            { username, handle },
-            'handle mapping failed: account not found',
+            'handle mapping failed: account not found {username} {handle}',
+            {
+              username,
+              handle,
+            },
           )
           return null
         }
@@ -128,16 +141,27 @@ export function setupActorDispatcher(ctx: AppContext) {
         // Double-check: also hide if resolved DID is the bridge account
         if (ctx.bridgeAccount.isAvailable() && did === ctx.bridgeAccount.did) {
           apLogger.debug(
-            { username, handle, did },
-            'hiding bridge account from handle mapping (by DID)',
+            'hiding bridge account from handle mapping (by DID): {username} {handle} {did}',
+            {
+              username,
+              handle,
+              did,
+            },
           )
           return null
         }
 
-        apLogger.debug({ username, handle, did }, 'mapped handle to did')
+        apLogger.debug('mapped handle to did: {username} {handle} {did}', {
+          username,
+          handle,
+          did,
+        })
         return did
       } catch (err) {
-        apLogger.warn({ err, username }, 'failed to map handle')
+        apLogger.warn('failed to map handle: {username} {err}', {
+          err,
+          username,
+        })
         return null
       }
     })
@@ -149,8 +173,10 @@ export function setupActorDispatcher(ctx: AppContext) {
           identifier === ctx.bridgeAccount.did
         ) {
           apLogger.debug(
-            { identifier },
-            'not providing keypairs for bridge account',
+            'not providing keypairs for bridge account: {identifier}',
+            {
+              identifier,
+            },
           )
           return []
         }
@@ -162,7 +188,9 @@ export function setupActorDispatcher(ctx: AppContext) {
         let ed25519Keypair = await ctx.db.getKeyPair(identifier, 'Ed25519')
 
         if (!rsaKeypair) {
-          apLogger.info({ identifier }, 'generating new RSA keypair')
+          apLogger.info('generating new RSA keypair: {identifier}', {
+            identifier,
+          })
           const { publicKey, privateKey } =
             await generateCryptoKeyPair('RSASSA-PKCS1-v1_5')
           rsaKeypair = await ctx.db.createKeyPair({
@@ -175,7 +203,9 @@ export function setupActorDispatcher(ctx: AppContext) {
         }
 
         if (!ed25519Keypair) {
-          apLogger.info({ identifier }, 'generating new Ed25519 keypair')
+          apLogger.info('generating new Ed25519 keypair: {identifier}', {
+            identifier,
+          })
           const { publicKey, privateKey } =
             await generateCryptoKeyPair('Ed25519')
           ed25519Keypair = await ctx.db.createKeyPair({
@@ -202,10 +232,13 @@ export function setupActorDispatcher(ctx: AppContext) {
           }),
         )
 
-        apLogger.debug({ identifier }, 'dispatched keypairs')
+        apLogger.debug('dispatched keypairs: {identifier}', { identifier })
         return pairs
       } catch (err) {
-        apLogger.warn({ err, identifier }, 'failed to dispatch keypairs')
+        apLogger.warn('failed to dispatch keypairs: {identifier} {err}', {
+          err,
+          identifier,
+        })
         return []
       }
     })

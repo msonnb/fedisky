@@ -4,6 +4,7 @@ import { APFederationConfig } from '../config'
 import { APDatabase } from '../db'
 import { apLogger } from '../logger'
 import { PDSClient } from '../pds-client'
+import { trace } from '@opentelemetry/api'
 
 export class BridgeAccountManager {
   private cfg: APFederationConfig
@@ -39,15 +40,20 @@ export class BridgeAccountManager {
 
       if (existing) {
         apLogger.info(
-          { did: existing.did, handle: existing.handle },
-          'found existing bridge account in database',
+          'found existing bridge account in database: {did} {handle}',
+          {
+            did: existing.did,
+            handle: existing.handle,
+          },
         )
 
         const account = await this.pdsClient.getAccount(existing.did)
         if (!account) {
           apLogger.warn(
-            { did: existing.did },
-            'bridge account no longer exists on PDS, will recreate',
+            'bridge account no longer exists on PDS, will recreate: {did}',
+            {
+              did: existing.did,
+            },
           )
           await this.db.deleteBridgeAccount()
         } else {
@@ -57,14 +63,19 @@ export class BridgeAccountManager {
             this._handle = existing.handle
             this._available = true
             apLogger.info(
-              { did: this._did, handle: this._handle },
-              'bridge account session refreshed successfully',
+              'bridge account session refreshed successfully: {did} {handle}',
+              {
+                did: this._did,
+                handle: this._handle,
+              },
             )
             return
           } catch (refreshErr) {
             apLogger.warn(
-              { err: refreshErr },
-              'failed to refresh bridge account session, will try to login',
+              'failed to refresh bridge account session, will try to login: {err}',
+              {
+                err: refreshErr,
+              },
             )
 
             try {
@@ -84,14 +95,19 @@ export class BridgeAccountManager {
 
               this._available = true
               apLogger.info(
-                { did: this._did, handle: this._handle },
-                'bridge account logged in successfully',
+                'bridge account logged in successfully: {did} {handle}',
+                {
+                  did: this._did,
+                  handle: this._handle,
+                },
               )
               return
             } catch (loginErr) {
               apLogger.warn(
-                { err: loginErr },
-                'failed to login to bridge account, will recreate',
+                'failed to login to bridge account, will recreate: {err}',
+                {
+                  err: loginErr,
+                },
               )
               await this.db.deleteBridgeAccount()
             }
@@ -102,8 +118,8 @@ export class BridgeAccountManager {
       await this.createBridgeAccount()
     } catch (err) {
       apLogger.error(
+        'failed to initialize bridge account - incoming replies will be disabled: {err}',
         { err },
-        'failed to initialize bridge account - incoming replies will be disabled',
       )
       this._available = false
     }
@@ -112,7 +128,10 @@ export class BridgeAccountManager {
   private async createBridgeAccount(): Promise<void> {
     const { handle, email, displayName, description } = this.cfg.bridge
 
-    apLogger.info({ handle, email }, 'creating new bridge account')
+    apLogger.info('creating new bridge account: {handle} {email}', {
+      handle,
+      email,
+    })
 
     const password = crypto.randomBytes(32).toString('hex')
 
@@ -122,8 +141,10 @@ export class BridgeAccountManager {
       apLogger.debug('created invite code for bridge account')
     } catch (err) {
       apLogger.debug(
-        { err },
-        'could not create invite code (invites may be disabled)',
+        'could not create invite code (invites may be disabled): {err}',
+        {
+          err,
+        },
       )
     }
 
@@ -150,16 +171,19 @@ export class BridgeAccountManager {
         updatedAt: new Date().toISOString(),
       })
 
-      apLogger.info(
-        { did: this._did, handle: this._handle },
-        'bridge account created successfully',
-      )
+      apLogger.info('bridge account created successfully: {did} {handle}', {
+        did: this._did,
+        handle: this._handle,
+      })
 
       await this.setupProfile(displayName, description)
 
       this._available = true
     } catch (err) {
-      apLogger.error({ err, handle, email }, 'failed to create bridge account')
+      apLogger.error(
+        'failed to create bridge account: {handle} {email} {err}',
+        { err, handle, email },
+      )
       throw err
     }
   }
@@ -202,9 +226,9 @@ export class BridgeAccountManager {
         record: profileRecord,
       })
 
-      apLogger.info({ did: this._did }, 'bridge account profile set up')
+      apLogger.info('bridge account profile set up: {did}', { did: this._did })
     } catch (err) {
-      apLogger.warn({ err }, 'failed to set up bridge account profile')
+      apLogger.warn('failed to set up bridge account profile: {err}', { err })
     }
   }
 

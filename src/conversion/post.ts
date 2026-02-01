@@ -197,7 +197,9 @@ export const postConverter: RecordConverter<Post, Note> = {
     try {
       const content = object.content
       if (!content) {
-        apLogger.debug({ noteId: object.id?.href }, 'note has no content')
+        apLogger.debug('note has no content: {noteId}', {
+          noteId: object.id?.href,
+        })
         return null
       }
 
@@ -286,10 +288,11 @@ export const postConverter: RecordConverter<Post, Note> = {
       const rkey = TID.next().toString()
       const uri = `at://${identifier}/app.bsky.feed.post/${rkey}`
 
-      apLogger.debug(
-        { uri, cid: cid.toString(), noteId: object.id?.href },
-        'converted AP note to post record',
-      )
+      apLogger.debug('converted AP note to post record: {uri} {cid} {noteId}', {
+        uri,
+        cid: cid.toString(),
+        noteId: object.id?.href,
+      })
 
       return {
         uri,
@@ -297,10 +300,10 @@ export const postConverter: RecordConverter<Post, Note> = {
         value: record,
       }
     } catch (err) {
-      apLogger.error(
-        { err, noteId: object.id?.href },
-        'failed to convert AP note to record',
-      )
+      apLogger.error('failed to convert AP note to record: {noteId} {err}', {
+        err,
+        noteId: object.id?.href,
+      })
       return null
     }
   },
@@ -389,10 +392,9 @@ async function parseReplyTarget(
     // Format: /posts/at://did:xxx/collection/rkey
     const atUriMatch = urlPath.match(/\/posts\/(at:\/\/[^/]+\/[^/]+\/[^/]+)/)
     if (!atUriMatch) {
-      apLogger.debug(
-        { url: replyTargetUrl.href },
-        'could not parse reply target URL',
-      )
+      apLogger.debug('could not parse reply target URL: {url}', {
+        url: replyTargetUrl.href,
+      })
       return null
     }
 
@@ -412,10 +414,10 @@ async function parseReplyTarget(
       parent: parentRef,
     }
   } catch (err) {
-    apLogger.debug(
-      { err, url: replyTargetUrl.href },
-      'failed to parse reply target',
-    )
+    apLogger.debug('failed to parse reply target: {url} {err}', {
+      err,
+      url: replyTargetUrl.href,
+    })
     return null
   }
 }

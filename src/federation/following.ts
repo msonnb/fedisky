@@ -41,8 +41,12 @@ export function setupFollowingDispatcher(ctx: AppContext) {
             )
 
           apLogger.debug(
-            { identifier, followingCount: items.length, cursor },
-            'dispatching following',
+            'dispatching following: {identifier} {followingCount} items, cursor={cursor}',
+            {
+              identifier,
+              followingCount: items.length,
+              cursor,
+            },
           )
           return {
             items,
@@ -50,8 +54,12 @@ export function setupFollowingDispatcher(ctx: AppContext) {
           }
         } catch (err) {
           apLogger.warn(
-            { err, identifier, cursor },
-            'failed to dispatch following',
+            'failed to dispatch following: {identifier} {cursor} {err}',
+            {
+              err,
+              identifier,
+              cursor,
+            },
           )
           return { items: [], nextCursor: null }
         }
@@ -76,7 +84,10 @@ export function setupFollowingDispatcher(ctx: AppContext) {
 
         return localAccounts.size
       } catch (err) {
-        apLogger.warn({ err, identifier }, 'failed to count following')
+        apLogger.warn('failed to count following: {identifier} {err}', {
+          err,
+          identifier,
+        })
         return 0
       }
     })

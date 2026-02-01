@@ -56,7 +56,7 @@ export async function downloadAndStoreBlob(
   try {
     validateBlobUrl(attachment.url, options?.allowPrivateAddress ?? false)
 
-    apLogger.debug({ url: attachment.url }, 'downloading remote blob')
+    apLogger.debug('downloading remote blob', { url: attachment.url })
 
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 30000) // 30s timeout
@@ -72,10 +72,10 @@ export async function downloadAndStoreBlob(
     clearTimeout(timeout)
 
     if (!response.ok) {
-      apLogger.warn(
-        { url: attachment.url, status: response.status },
-        'failed to fetch remote blob',
-      )
+      apLogger.warn('failed to fetch remote blob', {
+        url: attachment.url,
+        status: response.status,
+      })
       return null
     }
 
@@ -88,10 +88,10 @@ export async function downloadAndStoreBlob(
     const contentLength = response.headers.get('content-length')
     const maxSize = 10 * 1024 * 1024 // 10MB limit
     if (contentLength && parseInt(contentLength, 10) > maxSize) {
-      apLogger.warn(
-        { url: attachment.url, size: contentLength },
-        'remote blob too large, skipping',
-      )
+      apLogger.warn('remote blob too large, skipping', {
+        url: attachment.url,
+        size: contentLength,
+      })
       return null
     }
 
@@ -100,24 +100,21 @@ export async function downloadAndStoreBlob(
 
     // Enforce size limit on actual downloaded content (not just Content-Length header)
     if (data.byteLength > maxSize) {
-      apLogger.warn(
-        { url: attachment.url, size: data.byteLength },
-        'downloaded blob exceeds size limit, skipping',
-      )
+      apLogger.warn('downloaded blob exceeds size limit, skipping', {
+        url: attachment.url,
+        size: data.byteLength,
+      })
       return null
     }
 
     const blobRef = await uploadBlob(data, contentType)
 
-    apLogger.debug(
-      {
-        url: attachment.url,
-        ref: blobRef.ref,
-        mimeType: blobRef.mimeType,
-        size: blobRef.size,
-      },
-      'successfully downloaded and uploaded blob',
-    )
+    apLogger.debug('successfully downloaded and uploaded blob', {
+      url: attachment.url,
+      ref: blobRef.ref,
+      mimeType: blobRef.mimeType,
+      size: blobRef.size,
+    })
 
     return {
       blobRef,
@@ -128,13 +125,13 @@ export async function downloadAndStoreBlob(
   } catch (err) {
     // Handle AbortError for timeout
     if (err instanceof Error && err.name === 'AbortError') {
-      apLogger.warn({ url: attachment.url }, 'blob download timed out')
+      apLogger.warn('blob download timed out', { url: attachment.url })
       return null
     }
-    apLogger.warn(
-      { err, url: attachment.url },
-      'failed to download and store blob',
-    )
+    apLogger.warn('failed to download and store blob', {
+      err,
+      url: attachment.url,
+    })
     return null
   }
 }

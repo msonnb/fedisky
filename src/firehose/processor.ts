@@ -57,7 +57,7 @@ export class FirehoseProcessor {
     try {
       await this.connect()
     } catch (err) {
-      apLogger.error({ err }, 'firehose processor crashed')
+      apLogger.error('firehose processor crashed: {err}', { err })
       this.running = false
       throw err
     }
@@ -74,7 +74,7 @@ export class FirehoseProcessor {
     }
 
     const fullUrl = params.toString() ? `${wsUrl}?${params}` : wsUrl
-    apLogger.info({ url: fullUrl }, 'connecting to firehose')
+    apLogger.info('connecting to firehose: {url}', { url: fullUrl })
 
     const ws = new WebSocket(fullUrl)
 
@@ -86,12 +86,12 @@ export class FirehoseProcessor {
       try {
         await this.processMessage(data)
       } catch (err) {
-        apLogger.warn({ err }, 'failed to process firehose message')
+        apLogger.warn('failed to process firehose message: {err}', { err })
       }
     })
 
     ws.on('error', (err) => {
-      apLogger.error({ err }, 'firehose websocket error')
+      apLogger.error('firehose websocket error: {err}', { err })
     })
 
     ws.on('close', () => {
@@ -101,7 +101,7 @@ export class FirehoseProcessor {
         setTimeout(() => {
           if (this.running) {
             this.connect().catch((err) => {
-              apLogger.error({ err }, 'failed to reconnect to firehose')
+              apLogger.error('failed to reconnect to firehose: {err}', { err })
             })
           }
         }, 5000)
@@ -132,7 +132,9 @@ export class FirehoseProcessor {
       // Only process message frames (op=1), skip error frames (op=-1)
       if (header.op !== FrameType.Message) {
         if (header.op === FrameType.Error) {
-          apLogger.warn({ error: body }, 'received error frame from firehose')
+          apLogger.warn('received error frame from firehose: {error}', {
+            error: body,
+          })
         }
         return
       }
@@ -159,7 +161,7 @@ export class FirehoseProcessor {
       await this.processCommit(event)
     } catch (err) {
       // Log but don't throw - we want to continue processing
-      apLogger.debug({ err }, 'failed to decode firehose message')
+      apLogger.debug('failed to decode firehose message: {err}', { err })
     }
   }
 
@@ -171,7 +173,7 @@ export class FirehoseProcessor {
       this.ctx.bridgeAccount.isAvailable() &&
       did === this.ctx.bridgeAccount.did
     ) {
-      apLogger.debug({ did }, 'skipping commit from bridge account')
+      apLogger.debug('skipping commit from bridge account: {did}', { did })
       return
     }
 
@@ -180,8 +182,8 @@ export class FirehoseProcessor {
       const recordConverter = recordConverterRegistry.get(collection)
       if (!recordConverter) {
         apLogger.debug(
+          'no converter registered for collection, skipping: {collection} {path}',
           { collection, path: op.path },
-          'no converter registered for collection, skipping',
         )
         continue
       }
@@ -223,7 +225,10 @@ export class FirehoseProcessor {
       )
 
       if (!record) {
-        apLogger.debug({ did, uri }, 'skipping event: record not found')
+        apLogger.debug('skipping event: record not found {did} {uri}', {
+          did,
+          uri,
+        })
         return
       }
 
@@ -237,8 +242,8 @@ export class FirehoseProcessor {
 
       if (!conversionResult?.activity) {
         apLogger.debug(
+          'skipping event: conversion returned null or no activity {did} {uri}',
           { did, uri },
-          'skipping event: conversion returned null or no activity',
         )
         return
       }
@@ -265,18 +270,15 @@ export class FirehoseProcessor {
           'followers',
           activity,
         )
-        apLogger.info(
-          {
-            did,
-            uri,
-            activityId: activity.id?.href,
-          },
-          'sent activity to followers',
-        )
+        apLogger.info('sent activity to followers: {did} {uri} {activityId}', {
+          did,
+          uri,
+          activityId: activity.id?.href,
+        })
       } catch (sendErr) {
         apLogger.warn(
+          'failed to send activity to followers: {did} {uri} {activityId} {err}',
           { did, uri, activityId: activity.id?.href, err: sendErr },
-          'failed to send activity to followers',
         )
       }
 
@@ -296,16 +298,17 @@ export class FirehoseProcessor {
               activity,
             )
             apLogger.info(
+              'sent reply activity to original AP author: {did} {uri} {activityId} {originalAuthorInbox}',
               {
                 did,
                 uri,
                 activityId: activity.id?.href,
                 originalAuthorInbox,
               },
-              'sent reply activity to original AP author',
             )
           } catch (sendErr) {
             apLogger.warn(
+              'failed to send reply activity to original AP author: {did} {uri} {activityId} {originalAuthorInbox} {err}',
               {
                 did,
                 uri,
@@ -313,15 +316,18 @@ export class FirehoseProcessor {
                 originalAuthorInbox,
                 err: sendErr,
               },
-              'failed to send reply activity to original AP author',
             )
           }
         }
       }
     } catch (err) {
       apLogger.warn(
-        { did, uri, err },
-        'failed to process commit for AP delivery',
+        'failed to process commit for AP delivery: {did} {uri} {err}',
+        {
+          did,
+          uri,
+          err,
+        },
       )
     }
   }
@@ -335,7 +341,10 @@ export class FirehoseProcessor {
       const activity = this.buildDeleteActivity(fedifyContext, did, uri)
 
       if (!activity) {
-        apLogger.debug({ did, uri }, 'skipping event: no activity to send')
+        apLogger.debug('skipping event: no activity to send {did} {uri}', {
+          did,
+          uri,
+        })
         return
       }
 
@@ -346,8 +355,12 @@ export class FirehoseProcessor {
       })
     } catch (err) {
       apLogger.warn(
-        { did, uri, err },
-        'failed to process delete for AP delivery',
+        'failed to process delete for AP delivery: {did} {uri} {err}',
+        {
+          did,
+          uri,
+          err,
+        },
       )
     }
   }
@@ -418,16 +431,17 @@ export class FirehoseProcessor {
         activity,
       )
       apLogger.info(
+        'sent activity to followers: {did} {activityId} {activityType} {objectId}',
         {
           did,
           activityId: activity.id?.href,
           activityType,
           objectId: activity.objectId?.href,
         },
-        'sent activity to followers',
       )
     } catch (sendErr) {
       apLogger.warn(
+        'failed to send activity to followers: {did} {activityId} {activityType} {objectId} {err}',
         {
           did,
           activityId: activity.id?.href,
@@ -435,7 +449,6 @@ export class FirehoseProcessor {
           activityType,
           objectId: activity.objectId?.href,
         },
-        'failed to send activity to followers',
       )
     }
   }

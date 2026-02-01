@@ -68,8 +68,10 @@ export function setupOutboxDispatcher(ctx: AppContext) {
                 )
                 if (!recordConverter) {
                   apLogger.debug(
-                    { collection: atUri.collection },
-                    'no converter found for collection',
+                    'no converter found for collection: {collection}',
+                    {
+                      collection: atUri.collection,
+                    },
                   )
                   return null
                 }
@@ -89,8 +91,11 @@ export function setupOutboxDispatcher(ctx: AppContext) {
                 return conversionResult.activity
               } catch (err) {
                 apLogger.warn(
-                  { err, uri: record.uri },
-                  'failed to convert record to activity',
+                  'failed to convert record to activity: {uri} {err}',
+                  {
+                    err,
+                    uri: record.uri,
+                  },
                 )
                 return null
               }
@@ -101,8 +106,12 @@ export function setupOutboxDispatcher(ctx: AppContext) {
             (item): item is NonNullable<typeof item> => item !== null,
           )
           apLogger.debug(
-            { identifier, itemCount: filteredItems.length, cursor },
-            'dispatching outbox',
+            'dispatching outbox: {identifier} {itemCount} items, cursor={cursor}',
+            {
+              identifier,
+              itemCount: filteredItems.length,
+              cursor,
+            },
           )
           return {
             items: filteredItems,
@@ -110,8 +119,12 @@ export function setupOutboxDispatcher(ctx: AppContext) {
           }
         } catch (err) {
           apLogger.warn(
-            { err, identifier, cursor },
-            'failed to dispatch outbox',
+            'failed to dispatch outbox: {identifier} {cursor} {err}',
+            {
+              err,
+              identifier,
+              cursor,
+            },
           )
           return { items: [], nextCursor: null }
         }
@@ -130,7 +143,10 @@ export function setupOutboxDispatcher(ctx: AppContext) {
         }
         return total
       } catch (err) {
-        apLogger.warn({ err, identifier }, 'failed to count outbox items')
+        apLogger.warn('failed to count outbox items: {identifier} {err}', {
+          err,
+          identifier,
+        })
         return 0
       }
     })
@@ -146,10 +162,10 @@ export function setupOutboxDispatcher(ctx: AppContext) {
         const recordConverter = recordConverterRegistry.get(atUri.collection)
 
         if (!recordConverter) {
-          apLogger.debug(
-            { uri: values.uri, collection: atUri.collection },
-            'no converter found for object',
-          )
+          apLogger.debug('no converter found for object: {uri} {collection}', {
+            uri: values.uri,
+            collection: atUri.collection,
+          })
           return null
         }
 
@@ -160,7 +176,9 @@ export function setupOutboxDispatcher(ctx: AppContext) {
         )
 
         if (!record) {
-          apLogger.debug({ uri: values.uri }, 'record not found for object')
+          apLogger.debug('record not found for object: {uri}', {
+            uri: values.uri,
+          })
           return null
         }
 
@@ -173,14 +191,19 @@ export function setupOutboxDispatcher(ctx: AppContext) {
         )
 
         if (!conversionResult) {
-          apLogger.debug({ uri: values.uri }, 'conversion failed for object')
+          apLogger.debug('conversion failed for object: {uri}', {
+            uri: values.uri,
+          })
           return null
         }
 
-        apLogger.debug({ uri: values.uri }, 'dispatching object')
+        apLogger.debug('dispatching object: {uri}', { uri: values.uri })
         return conversionResult.object
       } catch (err) {
-        apLogger.warn({ err, uri: values.uri }, 'failed to dispatch object')
+        apLogger.warn('failed to dispatch object: {uri} {err}', {
+          err,
+          uri: values.uri,
+        })
         return null
       }
     },
