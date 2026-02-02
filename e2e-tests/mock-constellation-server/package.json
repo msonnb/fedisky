@@ -1,0 +1,22 @@
+{
+  "name": "mock-constellation-server",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Mock Constellation + AppView server for e2e tests",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "express": "^4.17.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "@types/node": "^22.19.7",
+    "typescript": "^5.6.3"
+  }
+}

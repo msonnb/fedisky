@@ -7,6 +7,7 @@ import {
   createTestDb,
   createMockPdsClient,
   createMockBridgeAccount,
+  createMockBlueskyBridgeAccount,
   testData,
 } from '../../test-utils'
 import { FirehoseProcessor } from '../processor'
@@ -48,6 +49,7 @@ describe('FirehoseProcessor', () => {
         db,
         pdsClient,
         bridgeAccount,
+        blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
@@ -104,6 +106,7 @@ describe('FirehoseProcessor', () => {
         db,
         pdsClient,
         bridgeAccount,
+        blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
@@ -154,6 +157,7 @@ describe('FirehoseProcessor', () => {
         db,
         pdsClient,
         bridgeAccount,
+        blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
@@ -204,6 +208,7 @@ describe('FirehoseProcessor', () => {
         db,
         pdsClient,
         bridgeAccount,
+        blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
@@ -253,6 +258,7 @@ describe('FirehoseProcessor', () => {
         db,
         pdsClient,
         bridgeAccount,
+        blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
@@ -307,6 +313,7 @@ describe('FirehoseProcessor', () => {
         db,
         pdsClient,
         bridgeAccount,
+        blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
@@ -364,6 +371,7 @@ describe('FirehoseProcessor', () => {
         db,
         pdsClient,
         bridgeAccount,
+        blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
@@ -412,6 +420,7 @@ describe('FirehoseProcessor', () => {
         db,
         pdsClient,
         bridgeAccount,
+        blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
@@ -477,6 +486,7 @@ describe('FirehoseProcessor', () => {
         db,
         pdsClient,
         bridgeAccount,
+        blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
@@ -544,6 +554,7 @@ describe('FirehoseProcessor', () => {
         db,
         pdsClient,
         bridgeAccount,
+        blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
@@ -596,6 +607,7 @@ describe('FirehoseProcessor', () => {
         db,
         pdsClient,
         bridgeAccount,
+        blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
@@ -652,6 +664,7 @@ describe('FirehoseProcessor', () => {
         db,
         pdsClient,
         bridgeAccount,
+        blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },

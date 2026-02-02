@@ -3,9 +3,12 @@ import { Kysely, SqliteDialect, Migrator, Migration } from 'kysely'
 import migrations from './migrations'
 import {
   DatabaseSchema,
+  blueskyBridgeAccount,
+  bridgeAccount,
+  externalReply,
   follow,
   keyPair,
-  bridgeAccount,
+  monitoredPost,
   postMapping,
 } from './schema'
 
@@ -237,6 +240,153 @@ export class APDatabase {
   async deletePostMapping(atUri: string): Promise<void> {
     await this.db
       .deleteFrom('ap_post_mapping')
+      .where('atUri', '=', atUri)
+      .execute()
+  }
+
+  async getBlueskyBridgeAccount(): Promise<
+    blueskyBridgeAccount.APBlueskyBridgeAccount | undefined
+  > {
+    return this.db
+      .selectFrom('ap_bluesky_bridge_account')
+      .selectAll()
+      .where('id', '=', 1)
+      .executeTakeFirst()
+  }
+
+  async saveBlueskyBridgeAccount(
+    data: Omit<blueskyBridgeAccount.APBlueskyBridgeAccount, 'id'>,
+  ): Promise<blueskyBridgeAccount.APBlueskyBridgeAccount> {
+    const existing = await this.getBlueskyBridgeAccount()
+    const now = new Date().toISOString()
+
+    if (existing) {
+      await this.db
+        .updateTable('ap_bluesky_bridge_account')
+        .set({
+          did: data.did,
+          handle: data.handle,
+          password: data.password,
+          accessJwt: data.accessJwt,
+          refreshJwt: data.refreshJwt,
+          updatedAt: now,
+        })
+        .where('id', '=', 1)
+        .execute()
+    } else {
+      await this.db
+        .insertInto('ap_bluesky_bridge_account')
+        .values({
+          id: 1,
+          did: data.did,
+          handle: data.handle,
+          password: data.password,
+          accessJwt: data.accessJwt,
+          refreshJwt: data.refreshJwt,
+          createdAt: data.createdAt || now,
+          updatedAt: now,
+        })
+        .execute()
+    }
+
+    return { id: 1, ...data, updatedAt: now }
+  }
+
+  async updateBlueskyBridgeAccountTokens(
+    accessJwt: string,
+    refreshJwt: string,
+  ): Promise<void> {
+    await this.db
+      .updateTable('ap_bluesky_bridge_account')
+      .set({
+        accessJwt,
+        refreshJwt,
+        updatedAt: new Date().toISOString(),
+      })
+      .where('id', '=', 1)
+      .execute()
+  }
+
+  async deleteBlueskyBridgeAccount(): Promise<void> {
+    await this.db
+      .deleteFrom('ap_bluesky_bridge_account')
+      .where('id', '=', 1)
+      .execute()
+  }
+
+  async createMonitoredPost(
+    data: monitoredPost.APMonitoredPost,
+  ): Promise<monitoredPost.APMonitoredPost> {
+    await this.db
+      .insertInto('ap_monitored_post')
+      .values(data)
+      .onConflict((oc) => oc.doNothing())
+      .execute()
+    return data
+  }
+
+  async getMonitoredPostsBatch(
+    limit: number,
+  ): Promise<monitoredPost.APMonitoredPost[]> {
+    return this.db
+      .selectFrom('ap_monitored_post')
+      .selectAll()
+      .orderBy('lastChecked', 'asc')
+      .limit(limit)
+      .execute()
+  }
+
+  async updateMonitoredPostLastChecked(atUri: string): Promise<void> {
+    await this.db
+      .updateTable('ap_monitored_post')
+      .set({
+        lastChecked: new Date().toISOString(),
+      })
+      .where('atUri', '=', atUri)
+      .execute()
+  }
+
+  async deleteMonitoredPost(atUri: string): Promise<void> {
+    await this.db
+      .deleteFrom('ap_monitored_post')
+      .where('atUri', '=', atUri)
+      .execute()
+  }
+
+  async createExternalReply(
+    data: externalReply.APExternalReply,
+  ): Promise<externalReply.APExternalReply> {
+    await this.db
+      .insertInto('ap_external_reply')
+      .values(data)
+      .onConflict((oc) => oc.doNothing())
+      .execute()
+    return data
+  }
+
+  async getExternalReply(
+    atUri: string,
+  ): Promise<externalReply.APExternalReply | undefined> {
+    return this.db
+      .selectFrom('ap_external_reply')
+      .selectAll()
+      .where('atUri', '=', atUri)
+      .executeTakeFirst()
+  }
+
+  async getExternalRepliesByParent(
+    parentAtUri: string,
+  ): Promise<externalReply.APExternalReply[]> {
+    return this.db
+      .selectFrom('ap_external_reply')
+      .selectAll()
+      .where('parentAtUri', '=', parentAtUri)
+      .execute()
+  }
+
+  async deleteExternalReply(atUri: string): Promise<void> {
+    await this.db
+      .deleteFrom('ap_external_reply')
       .where('atUri', '=', atUri)
       .execute()
   }

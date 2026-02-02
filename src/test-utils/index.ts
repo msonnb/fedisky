@@ -1,4 +1,5 @@
 import { vi, type Mock } from 'vitest'
+import type { BlueskyBridgeAccountManager } from '../bluesky-bridge'
 import type { BridgeAccountManager } from '../bridge-account'
 import { APDatabase } from '../db'
 import type { PDSClient } from '../pds-client'
@@ -88,6 +89,48 @@ export function createMockBridgeAccount(
   } as unknown as { [K in keyof BridgeAccountManager]: Mock } & {
     did: string
     handle: string
+  }
+}
+
+export function createMockBlueskyBridgeAccount(
+  overrides: Partial<BlueskyBridgeAccountManager> & {
+    _did?: string | null
+    _handle?: string | null
+    _available?: boolean
+  } = {},
+): { [K in keyof BlueskyBridgeAccountManager]: Mock } & {
+  did: string | null
+  handle: string | null
+} {
+  const {
+    _did = null,
+    _handle = null,
+    _available = false,
+    ...rest
+  } = overrides
+  return {
+    isAvailable: vi.fn().mockReturnValue(_available),
+    get did() {
+      return _did
+    },
+    get handle() {
+      return _handle
+    },
+    initialize: vi.fn().mockResolvedValue(undefined),
+    getAgent: vi.fn().mockResolvedValue({}),
+    createRecord: vi.fn().mockResolvedValue({
+      uri: `at://${_did}/app.bsky.feed.post/test123`,
+      cid: 'bafytest',
+    }),
+    uploadBlob: vi.fn().mockResolvedValue({
+      ref: { toString: () => 'bafyblob' },
+      mimeType: 'image/jpeg',
+      size: 1000,
+    }),
+    ...rest,
+  } as unknown as { [K in keyof BlueskyBridgeAccountManager]: Mock } & {
+    did: string | null
+    handle: string | null
   }
 }
 

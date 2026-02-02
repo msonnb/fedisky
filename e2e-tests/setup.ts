@@ -1,16 +1,20 @@
 import { beforeAll, afterAll } from 'vitest'
 import { FediskyClient } from './clients/fedisky-client'
 import { MockAPClient } from './clients/mock-ap-client'
+import { MockConstellationClient } from './clients/mock-constellation-client'
 import { PDSTestClient } from './clients/pds-client'
 
 // Base URLs for services (via Caddy reverse proxy with TLS)
 const BSKY_URL = process.env.E2E_BSKY_URL || 'https://bsky.test'
 const MASTODON_URL = process.env.E2E_MASTODON_URL || 'https://mastodon.test'
+const CONSTELLATION_URL =
+  process.env.E2E_CONSTELLATION_URL || 'http://localhost:3002'
 
 export interface E2EContext {
   pds: PDSTestClient
   fedisky: FediskyClient
   mockAp: MockAPClient
+  mockConstellation: MockConstellationClient
 }
 
 /**
@@ -23,6 +27,7 @@ export function createE2EContext(): E2EContext {
     pds: new PDSTestClient(BSKY_URL),
     fedisky: new FediskyClient(BSKY_URL),
     mockAp: new MockAPClient(MASTODON_URL),
+    mockConstellation: new MockConstellationClient(CONSTELLATION_URL),
   }
 }
 
