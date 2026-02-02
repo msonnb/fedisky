@@ -17,6 +17,7 @@ CA_CERT_FILE="/tmp/e2e-caddy-ca.crt"
 # Track PIDs for cleanup
 FEDISKY_PID=""
 MOCKAP_PID=""
+MOCKCONSTELLATION_PID=""
 
 cleanup() {
   echo ""
@@ -30,6 +31,10 @@ cleanup() {
   if [[ -n "$MOCKAP_PID" ]] && kill -0 "$MOCKAP_PID" 2>/dev/null; then
     echo "Stopping mock-ap (PID $MOCKAP_PID)"
     kill "$MOCKAP_PID" 2>/dev/null || true
+  fi
+  if [[ -n "$MOCKCONSTELLATION_PID" ]] && kill -0 "$MOCKCONSTELLATION_PID" 2>/dev/null; then
+    echo "Stopping mock-constellation (PID $MOCKCONSTELLATION_PID)"
+    kill "$MOCKCONSTELLATION_PID" 2>/dev/null || true
   fi
   
   # Stop Docker services
@@ -116,6 +121,12 @@ cd "$SCRIPT_DIR/mock-ap-server"
 pnpm build
 cd "$PROJECT_DIR"
 
+# Build mock-constellation server
+echo "Building mock-constellation server..."
+cd "$SCRIPT_DIR/mock-constellation-server"
+pnpm build
+cd "$PROJECT_DIR"
+
 # Step 5: Start Fedisky (native)
 echo ""
 echo "Step 5: Starting Fedisky..."
@@ -127,6 +138,10 @@ PDS_ADMIN_TOKEN=admin-password \
 AP_DB_LOCATION=:memory: \
 AP_FIREHOSE_ENABLED=true \
 AP_BRIDGE_HANDLE=bridge.bsky.test \
+AP_BLUESKY_BRIDGE_HANDLE=relay.bsky.test \
+AP_CONSTELLATION_URL=http://localhost:3002 \
+AP_CONSTELLATION_POLL_INTERVAL=5000 \
+AP_APPVIEW_URL=http://localhost:3002 \
 AP_ALLOW_PRIVATE_ADDRESS=true \
 LOG_ENABLED=true \
 NODE_EXTRA_CA_CERTS="$CA_CERT_FILE" \
@@ -149,9 +164,19 @@ MOCKAP_PID=$!
 
 echo "mock-ap started (PID $MOCKAP_PID)"
 
-# Step 7: Wait for services to be ready
+# Step 7: Start mock-constellation (native)
 echo ""
-echo "Step 7: Waiting for services to be ready..."
+echo "Step 7: Starting mock-constellation server..."
+
+CONSTELLATION_PORT=3002 \
+node "$SCRIPT_DIR/mock-constellation-server/dist/index.js" &
+MOCKCONSTELLATION_PID=$!
+
+echo "mock-constellation started (PID $MOCKCONSTELLATION_PID)"
+
+# Step 8: Wait for services to be ready
+echo ""
+echo "Step 8: Waiting for services to be ready..."
 
 # Wait for Fedisky health
 for i in {1..30}; do
@@ -179,9 +204,22 @@ for i in {1..30}; do
   sleep 1
 done
 
+# Wait for mock-constellation health
+for i in {1..30}; do
+  if curl -sf http://localhost:3002/health >/dev/null 2>&1; then
+    echo "mock-constellation is ready"
+    break
+  fi
+  if [[ $i -eq 30 ]]; then
+    echo "ERROR: mock-constellation failed to start"
+    exit 1
+  fi
+  sleep 1
+done
+
 echo "All services are ready"
 
-# Step 8: Run tests
+# Step 9: Run tests
 echo ""
 echo "Step 8: Running E2E tests..."
 echo ""

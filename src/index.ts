@@ -8,6 +8,7 @@ import { rateLimit } from 'express-rate-limit'
 import helmet from 'helmet'
 import { createHttpTerminator, HttpTerminator } from 'http-terminator'
 import { APFederationConfig } from './config'
+import { ConstellationProcessor } from './constellation'
 import { AppContext } from './context'
 import { createRouter } from './federation'
 import { FirehoseProcessor } from './firehose'
@@ -24,6 +25,7 @@ export class APFederationService {
   private server?: http.Server
   private terminator?: HttpTerminator
   private firehoseProcessor?: FirehoseProcessor
+  private constellationProcessor?: ConstellationProcessor
 
   constructor(opts: { ctx: AppContext; app: express.Application }) {
     this.ctx = opts.ctx
@@ -145,6 +147,18 @@ export class APFederationService {
       )
     }
 
+    await this.ctx.blueskyBridgeAccount.initialize()
+    if (this.ctx.blueskyBridgeAccount.isAvailable()) {
+      logger.info('bluesky bridge account initialized: {did} {handle}', {
+        did: this.ctx.blueskyBridgeAccount.did,
+        handle: this.ctx.blueskyBridgeAccount.handle,
+      })
+    } else {
+      logger.warn(
+        'bluesky bridge account not available - external reply federation will be disabled',
+      )
+    }
+
     const port = this.ctx.cfg.service.port
     this.server = this.app.listen(port, () => {
       logger.info('ActivityPub federation service started on port {port}', {
@@ -159,6 +173,14 @@ export class APFederationService {
       await this.firehoseProcessor.start()
     }
 
+    if (
+      this.ctx.cfg.constellation.url &&
+      this.ctx.blueskyBridgeAccount.isAvailable()
+    ) {
+      this.constellationProcessor = new ConstellationProcessor(this.ctx)
+      await this.constellationProcessor.start()
+    }
+
     return this.server
   }
 
@@ -168,6 +190,11 @@ export class APFederationService {
     if (this.firehoseProcessor) {
       await this.firehoseProcessor.stop()
       this.firehoseProcessor = undefined
+    }
+
+    if (this.constellationProcessor) {
+      await this.constellationProcessor.stop()
+      this.constellationProcessor = undefined
     }
 
     if (this.terminator) {

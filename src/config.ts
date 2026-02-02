@@ -15,6 +15,15 @@ export function readEnv() {
     bridgeDisplayName: envStr('AP_BRIDGE_DISPLAY_NAME'),
     bridgeDescription: envStr('AP_BRIDGE_DESCRIPTION'),
     allowPrivateAddress: envBool('AP_ALLOW_PRIVATE_ADDRESS'),
+    // Bluesky bridge account config
+    blueskyBridgeHandle: envStr('AP_BLUESKY_BRIDGE_HANDLE'),
+    blueskyBridgeDisplayName: envStr('AP_BLUESKY_BRIDGE_DISPLAY_NAME'),
+    blueskyBridgeDescription: envStr('AP_BLUESKY_BRIDGE_DESCRIPTION'),
+    // Constellation config
+    constellationUrl: envStr('AP_CONSTELLATION_URL'),
+    constellationPollInterval: envInt('AP_CONSTELLATION_POLL_INTERVAL'),
+    // AppView config
+    appViewUrl: envStr('AP_APPVIEW_URL'),
   }
 }
 
@@ -44,6 +53,22 @@ export interface APFederationConfig {
     displayName: string
     description: string
   }
+  /** Bluesky bridge account for federating external Bluesky replies */
+  blueskyBridge: {
+    handle: string
+    email: string
+    displayName: string
+    description: string
+  }
+  /** Constellation service for discovering external Bluesky replies */
+  constellation: {
+    url: string
+    pollInterval: number
+  }
+  /** AppView service URL for fetching public records */
+  appView: {
+    url: string
+  }
   /** Allow fetching private network addresses (for E2E testing only) */
   allowPrivateAddress?: boolean
 }
@@ -61,6 +86,9 @@ export function envToConfig(env: ServerEnvironment): APFederationConfig {
   const bridgeHandle =
     env.bridgeHandle ??
     `mastodon.${hostname === 'localhost' ? 'test' : hostname}`
+  const blueskyBridgeHandle =
+    env.blueskyBridgeHandle ??
+    `relay.${hostname === 'localhost' ? 'test' : hostname}`
   return {
     service: {
       port,
@@ -86,6 +114,21 @@ export function envToConfig(env: ServerEnvironment): APFederationConfig {
       description:
         env.bridgeDescription ??
         'This account posts content from Mastodon and other Fediverse servers.',
+    },
+    blueskyBridge: {
+      handle: blueskyBridgeHandle,
+      email: `noreply+${blueskyBridgeHandle}@${hostname}`,
+      displayName: env.blueskyBridgeDisplayName ?? 'Bluesky Bridge',
+      description:
+        env.blueskyBridgeDescription ??
+        'This account relays replies from external Bluesky users.',
+    },
+    constellation: {
+      url: env.constellationUrl ?? '',
+      pollInterval: env.constellationPollInterval ?? 60000, // Default 60 seconds
+    },
+    appView: {
+      url: env.appViewUrl ?? 'https://public.api.bsky.app',
     },
     allowPrivateAddress: env.allowPrivateAddress ?? false,
   }

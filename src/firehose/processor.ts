@@ -168,12 +168,22 @@ export class FirehoseProcessor {
   private async processCommit(event: CommitEvent) {
     const did = event.repo
 
-    // Skip events from the bridge account - it should not federate to ActivityPub
+    // Skip events from bridge accounts - they should not federate to ActivityPub
     if (
       this.ctx.bridgeAccount.isAvailable() &&
       did === this.ctx.bridgeAccount.did
     ) {
       apLogger.debug('skipping commit from bridge account: {did}', { did })
+      return
+    }
+
+    if (
+      this.ctx.blueskyBridgeAccount.isAvailable() &&
+      did === this.ctx.blueskyBridgeAccount.did
+    ) {
+      apLogger.debug('skipping commit from bluesky bridge account: {did}', {
+        did,
+      })
       return
     }
 
@@ -280,6 +290,23 @@ export class FirehoseProcessor {
           'failed to send activity to followers: {did} {uri} {activityId} {err}',
           { did, uri, activityId: activity.id?.href, err: sendErr },
         )
+      }
+
+      // Add posts to monitored list for external reply discovery via Constellation
+      if (collection === 'app.bsky.feed.post') {
+        try {
+          await this.ctx.db.createMonitoredPost({
+            atUri: uri,
+            authorDid: did,
+            lastChecked: null,
+            createdAt: new Date().toISOString(),
+          })
+        } catch (monitorErr) {
+          apLogger.debug('failed to add post to monitoring: {uri} {err}', {
+            uri,
+            err: monitorErr,
+          })
+        }
       }
 
       // Send to original AP author's inbox if this is a reply to a bridge post
