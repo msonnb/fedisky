@@ -460,7 +460,7 @@ INSTALLER_MESSAGE
 
     # Test NodeInfo
     echo "* Testing NodeInfo endpoint..."
-    NODEINFO_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${AP_PORT}/nodeinfo/2.0" 2>/dev/null || echo "failed")
+    NODEINFO_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${AP_PORT}/nodeinfo/2.1" 2>/dev/null || echo "failed")
     if [[ "${NODEINFO_RESPONSE}" == "200" ]]; then
       echo "  NodeInfo: OK (HTTP 200)"
     else
