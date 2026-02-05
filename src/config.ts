@@ -7,6 +7,7 @@ export function readEnv() {
     publicUrl: envStr('AP_PUBLIC_URL'),
     version: envStr('AP_VERSION'),
     pdsUrl: envStr('PDS_URL'),
+    pdsHostname: envStr('PDS_HOSTNAME'),
     pdsAdminToken: envStr('PDS_ADMIN_TOKEN'),
     dbLocation: envStr('AP_DB_LOCATION'),
     firehoseEnabled: envBool('AP_FIREHOSE_ENABLED'),
@@ -39,6 +40,7 @@ export interface APFederationConfig {
   pds: {
     url: string
     adminToken: string
+    hostname: string
   }
   db: {
     location: string
@@ -99,6 +101,7 @@ export function envToConfig(env: ServerEnvironment): APFederationConfig {
     },
     pds: {
       url: requireEnv('PDS_URL', env.pdsUrl),
+      hostname: requireEnv('PDS_HOSTNAME', env.pdsHostname),
       adminToken: requireEnv('PDS_ADMIN_TOKEN', env.pdsAdminToken),
     },
     db: {

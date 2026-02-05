@@ -101,7 +101,7 @@ export function setupActorDispatcher(ctx: AppContext) {
       event?.set('actor.username', username)
 
       try {
-        const hostname = ctx.cfg.service.hostname
+        const hostname = ctx.cfg.pds.hostname
         const handle = `${username}.${hostname === 'localhost' ? 'test' : hostname}`
         event?.set('actor.handle', handle)
 

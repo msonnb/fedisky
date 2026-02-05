@@ -187,6 +187,7 @@ AP_VERSION=0.0.1
 # PDS connection (reusing PDS credentials)
 PDS_URL=http://localhost:3000
 PDS_ADMIN_TOKEN=${PDS_ADMIN_PASSWORD}
+PDS_HOSTNAME=${PDS_HOSTNAME}
 
 # Database
 AP_DB_LOCATION=/data/activitypub.sqlite
