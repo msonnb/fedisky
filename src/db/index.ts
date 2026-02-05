@@ -141,7 +141,9 @@ export class APDatabase {
       .execute()
   }
 
-  async getBridgeAccount(): Promise<bridgeAccount.APBridgeAccount | undefined> {
+  async getMastodonBridgeAccount(): Promise<
+    bridgeAccount.APBridgeAccount | undefined
+  > {
     return this.db
       .selectFrom('ap_bridge_account')
       .selectAll()
@@ -149,10 +151,10 @@ export class APDatabase {
       .executeTakeFirst()
   }
 
-  async saveBridgeAccount(
+  async saveMastodonBridgeAccount(
     data: Omit<bridgeAccount.APBridgeAccount, 'id'>,
   ): Promise<bridgeAccount.APBridgeAccount> {
-    const existing = await this.getBridgeAccount()
+    const existing = await this.getMastodonBridgeAccount()
     const now = new Date().toISOString()
 
     if (existing) {
@@ -187,7 +189,7 @@ export class APDatabase {
     return { id: 1, ...data, updatedAt: now }
   }
 
-  async updateBridgeAccountTokens(
+  async updateMastodonBridgeAccountTokens(
     accessJwt: string,
     refreshJwt: string,
   ): Promise<void> {
@@ -202,7 +204,7 @@ export class APDatabase {
       .execute()
   }
 
-  async deleteBridgeAccount(): Promise<void> {
+  async deleteMastodonBridgeAccount(): Promise<void> {
     await this.db.deleteFrom('ap_bridge_account').where('id', '=', 1).execute()
   }
 

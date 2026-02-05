@@ -3,17 +3,17 @@ import { createFederation, type Federation } from '@fedify/fedify'
 import { SqliteKvStore, SqliteMessageQueue } from '@fedify/sqlite'
 import { AppViewClient } from './appview-client'
 import { BlueskyBridgeAccountManager } from './bluesky-bridge'
-import { BridgeAccountManager } from './bridge-account'
 import { APFederationConfig } from './config'
 import { APDatabase } from './db'
 import { logger } from './logger'
+import { MastodonBridgeAccountManager } from './mastodon-bridge'
 import { PDSClient } from './pds-client'
 
 export type AppContextOptions = {
   cfg: APFederationConfig
   db: APDatabase
   pdsClient: PDSClient
-  bridgeAccount: BridgeAccountManager
+  mastodonBridgeAccount: MastodonBridgeAccountManager
   blueskyBridgeAccount: BlueskyBridgeAccountManager
   appViewClient: AppViewClient
   federation: Federation<void>
@@ -24,7 +24,7 @@ export class AppContext {
   public cfg: APFederationConfig
   public db: APDatabase
   public pdsClient: PDSClient
-  public bridgeAccount: BridgeAccountManager
+  public mastodonBridgeAccount: MastodonBridgeAccountManager
   public blueskyBridgeAccount: BlueskyBridgeAccountManager
   public appViewClient: AppViewClient
   public federation: Federation<void>
@@ -34,7 +34,7 @@ export class AppContext {
     this.cfg = opts.cfg
     this.db = opts.db
     this.pdsClient = opts.pdsClient
-    this.bridgeAccount = opts.bridgeAccount
+    this.mastodonBridgeAccount = opts.mastodonBridgeAccount
     this.blueskyBridgeAccount = opts.blueskyBridgeAccount
     this.appViewClient = opts.appViewClient
     this.federation = opts.federation
@@ -44,7 +44,11 @@ export class AppContext {
   static fromConfig(cfg: APFederationConfig): AppContext {
     const db = new APDatabase(cfg.db.location)
     const pdsClient = new PDSClient(cfg)
-    const bridgeAccount = new BridgeAccountManager(cfg, db, pdsClient)
+    const mastodonBridgeAccount = new MastodonBridgeAccountManager(
+      cfg,
+      db,
+      pdsClient,
+    )
     const blueskyBridgeAccount = new BlueskyBridgeAccountManager(
       cfg,
       db,
@@ -62,7 +66,7 @@ export class AppContext {
       cfg,
       db,
       pdsClient,
-      bridgeAccount,
+      mastodonBridgeAccount,
       blueskyBridgeAccount,
       appViewClient,
       federation,

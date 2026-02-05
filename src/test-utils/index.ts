@@ -1,7 +1,7 @@
 import { vi, type Mock } from 'vitest'
 import type { BlueskyBridgeAccountManager } from '../bluesky-bridge'
-import type { BridgeAccountManager } from '../bridge-account'
 import { APDatabase } from '../db'
+import type { MastodonBridgeAccountManager } from '../mastodon-bridge'
 import type { PDSClient } from '../pds-client'
 
 export async function createTestDb(): Promise<APDatabase> {
@@ -52,12 +52,12 @@ export function createMockPdsClient(
   } as unknown as PDSClient
 }
 
-export function createMockBridgeAccount(
-  overrides: Partial<BridgeAccountManager> & {
+export function createMockMastodonBridgeAccount(
+  overrides: Partial<MastodonBridgeAccountManager> & {
     _did?: string
     _handle?: string
   } = {},
-): { [K in keyof BridgeAccountManager]: Mock } & {
+): { [K in keyof MastodonBridgeAccountManager]: Mock } & {
   did: string
   handle: string
 } {
@@ -86,7 +86,7 @@ export function createMockBridgeAccount(
       size: 1000,
     }),
     ...rest,
-  } as unknown as { [K in keyof BridgeAccountManager]: Mock } & {
+  } as unknown as { [K in keyof MastodonBridgeAccountManager]: Mock } & {
     did: string
     handle: string
   }
@@ -102,12 +102,7 @@ export function createMockBlueskyBridgeAccount(
   did: string | null
   handle: string | null
 } {
-  const {
-    _did = null,
-    _handle = null,
-    _available = false,
-    ...rest
-  } = overrides
+  const { _did = null, _handle = null, _available = false, ...rest } = overrides
   return {
     isAvailable: vi.fn().mockReturnValue(_available),
     get did() {

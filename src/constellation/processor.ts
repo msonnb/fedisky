@@ -133,8 +133,8 @@ export class ConstellationProcessor {
     }
 
     if (
-      (this.ctx.bridgeAccount.isAvailable() &&
-        replyAuthorDid === this.ctx.bridgeAccount.did) ||
+      (this.ctx.mastodonBridgeAccount.isAvailable() &&
+        replyAuthorDid === this.ctx.mastodonBridgeAccount.did) ||
       (this.ctx.blueskyBridgeAccount.isAvailable() &&
         replyAuthorDid === this.ctx.blueskyBridgeAccount.did)
     ) {

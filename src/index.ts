@@ -16,7 +16,8 @@ import { logger } from './logger'
 
 export * from './config'
 export { AppContext } from './context'
-export { BridgeAccountManager } from './bridge-account'
+export { MastodonBridgeAccountManager } from './mastodon-bridge'
+export { BlueskyBridgeAccountManager } from './bluesky-bridge'
 export { logger } from './logger'
 
 export class APFederationService {
@@ -135,15 +136,15 @@ export class APFederationService {
     await this.ctx.db.migrate()
     logger.info('database migrations completed')
 
-    await this.ctx.bridgeAccount.initialize()
-    if (this.ctx.bridgeAccount.isAvailable()) {
-      logger.info('bridge account initialized: {did} {handle}', {
-        did: this.ctx.bridgeAccount.did,
-        handle: this.ctx.bridgeAccount.handle,
+    await this.ctx.mastodonBridgeAccount.initialize()
+    if (this.ctx.mastodonBridgeAccount.isAvailable()) {
+      logger.info('mastodon bridge account initialized: {did} {handle}', {
+        did: this.ctx.mastodonBridgeAccount.did,
+        handle: this.ctx.mastodonBridgeAccount.handle,
       })
     } else {
       logger.warn(
-        'bridge account not available - incoming ActivityPub replies will be disabled',
+        'mastodon bridge account not available - incoming ActivityPub replies will be disabled',
       )
     }
 

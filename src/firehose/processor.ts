@@ -170,10 +170,12 @@ export class FirehoseProcessor {
 
     // Skip events from bridge accounts - they should not federate to ActivityPub
     if (
-      this.ctx.bridgeAccount.isAvailable() &&
-      did === this.ctx.bridgeAccount.did
+      this.ctx.mastodonBridgeAccount.isAvailable() &&
+      did === this.ctx.mastodonBridgeAccount.did
     ) {
-      apLogger.debug('skipping commit from bridge account: {did}', { did })
+      apLogger.debug('skipping commit from mastodon bridge account: {did}', {
+        did,
+      })
       return
     }
 

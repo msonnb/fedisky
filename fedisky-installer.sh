@@ -132,24 +132,24 @@ Run it with:
   fi
   echo
 
-  # Bridge account configuration
-  AP_BRIDGE_HANDLE="mastodon.${AP_HOSTNAME}"
-  AP_BRIDGE_DISPLAY_NAME="Mastodon Bridge"
-  AP_BRIDGE_DESCRIPTION="This account posts content from Mastodon and other Fediverse servers."
+  # Mastodon bridge account configuration
+  AP_MASTODON_BRIDGE_HANDLE="mastodon.${AP_HOSTNAME}"
+  AP_MASTODON_BRIDGE_DISPLAY_NAME="Mastodon Bridge"
+  AP_MASTODON_BRIDGE_DESCRIPTION="This account posts content from Mastodon and other Fediverse servers."
 
-  echo "The sidecar creates a 'bridge account' on your PDS to post incoming"
+  echo "The sidecar creates a 'mastodon bridge account' on your PDS to post incoming"
   echo "replies from Mastodon users. The default handle is: mastodon.${AP_HOSTNAME}"
   echo
-  read -p "Use a custom bridge account handle? (y/N): " CUSTOM_BRIDGE
+  read -p "Use a custom mastodon bridge account handle? (y/N): " CUSTOM_BRIDGE
   if [[ "${CUSTOM_BRIDGE}" =~ ^[Yy] ]]; then
-    read -p "Enter bridge account handle (e.g. fediverse.${AP_HOSTNAME}): " AP_BRIDGE_HANDLE
-    if [[ -z "${AP_BRIDGE_HANDLE}" ]]; then
-      AP_BRIDGE_HANDLE="mastodon.${AP_HOSTNAME}"
-      echo "  Using default: ${AP_BRIDGE_HANDLE}"
+    read -p "Enter mastodon bridge account handle (e.g. fediverse.${AP_HOSTNAME}): " AP_MASTODON_BRIDGE_HANDLE
+    if [[ -z "${AP_MASTODON_BRIDGE_HANDLE}" ]]; then
+      AP_MASTODON_BRIDGE_HANDLE="mastodon.${AP_HOSTNAME}"
+      echo "  Using default: ${AP_MASTODON_BRIDGE_HANDLE}"
     fi
-    read -p "Enter bridge account display name (default: Mastodon Bridge): " AP_BRIDGE_DISPLAY_NAME
-    if [[ -z "${AP_BRIDGE_DISPLAY_NAME}" ]]; then
-      AP_BRIDGE_DISPLAY_NAME="Mastodon Bridge"
+    read -p "Enter mastodon bridge account display name (default: Mastodon Bridge): " AP_MASTODON_BRIDGE_DISPLAY_NAME
+    if [[ -z "${AP_MASTODON_BRIDGE_DISPLAY_NAME}" ]]; then
+      AP_MASTODON_BRIDGE_DISPLAY_NAME="Mastodon Bridge"
     fi
   fi
   echo
@@ -194,10 +194,10 @@ AP_DB_LOCATION=/data/activitypub.sqlite
 # Firehose subscription
 AP_FIREHOSE_ENABLED=${AP_FIREHOSE_ENABLED}
 
-# Bridge account (auto-created on startup)
-AP_BRIDGE_HANDLE=${AP_BRIDGE_HANDLE}
-AP_BRIDGE_DISPLAY_NAME=${AP_BRIDGE_DISPLAY_NAME}
-AP_BRIDGE_DESCRIPTION=${AP_BRIDGE_DESCRIPTION}
+# Mastodon bridge account (auto-created on startup)
+AP_MASTODON_BRIDGE_HANDLE=${AP_MASTODON_BRIDGE_HANDLE}
+AP_MASTODON_BRIDGE_DISPLAY_NAME=${AP_MASTODON_BRIDGE_DISPLAY_NAME}
+AP_MASTODON_BRIDGE_DESCRIPTION=${AP_MASTODON_BRIDGE_DESCRIPTION}
 
 # Logging
 LOG_ENABLED=true
@@ -422,8 +422,8 @@ on your PDS. This account is used to post replies from Mastodon and other
 Fediverse users. The bridge account is hidden from ActivityPub federation
 and won't be discoverable from the Fediverse.
 
-Bridge handle         : ${AP_BRIDGE_HANDLE}
-Bridge display name   : ${AP_BRIDGE_DISPLAY_NAME}
+Bridge handle         : ${AP_MASTODON_BRIDGE_HANDLE}
+Bridge display name   : ${AP_MASTODON_BRIDGE_DISPLAY_NAME}
 
 ActivityPub Endpoints
 ------------------------------------------------------------------------

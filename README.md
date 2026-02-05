@@ -68,20 +68,20 @@ pnpm build
 
 ## Configuration
 
-| Variable                 | Required | Default                 | Description                                          |
-| ------------------------ | -------- | ----------------------- | ---------------------------------------------------- |
-| `PDS_URL`                | Yes      | -                       | URL of the ATProto PDS                               |
-| `PDS_ADMIN_TOKEN`        | Yes      | -                       | Admin token for PDS                                  |
-| `AP_PORT`                | No       | `2588`                  | Port for the service                                 |
-| `AP_HOSTNAME`            | No       | `localhost`             | Public hostname for ActivityPub URLs                 |
-| `AP_PUBLIC_URL`          | No       | Derived from hostname   | Explicit public URL override (useful behind proxies) |
-| `AP_VERSION`             | No       | `0.0.0`                 | Version reported in NodeInfo                         |
-| `AP_DB_LOCATION`         | No       | `:memory:`              | SQLite database path                                 |
-| `AP_FIREHOSE_ENABLED`    | No       | `true`                  | Enable firehose processing                           |
-| `AP_FIREHOSE_CURSOR`     | No       | -                       | Cursor position to resume firehose from              |
-| `AP_BRIDGE_HANDLE`       | No       | `mastodon.{hostname}`   | Handle for the bridge account                        |
-| `AP_BRIDGE_DISPLAY_NAME` | No       | `Mastodon Bridge`       | Display name for the bridge account                  |
-| `AP_BRIDGE_DESCRIPTION`  | No       | _(default description)_ | Description for the bridge account profile           |
+| Variable                          | Required | Default                 | Description                                          |
+| --------------------------------- | -------- | ----------------------- | ---------------------------------------------------- |
+| `PDS_URL`                         | Yes      | -                       | URL of the ATProto PDS                               |
+| `PDS_ADMIN_TOKEN`                 | Yes      | -                       | Admin token for PDS                                  |
+| `AP_PORT`                         | No       | `2588`                  | Port for the service                                 |
+| `AP_HOSTNAME`                     | No       | `localhost`             | Public hostname for ActivityPub URLs                 |
+| `AP_PUBLIC_URL`                   | No       | Derived from hostname   | Explicit public URL override (useful behind proxies) |
+| `AP_VERSION`                      | No       | `0.0.0`                 | Version reported in NodeInfo                         |
+| `AP_DB_LOCATION`                  | No       | `:memory:`              | SQLite database path                                 |
+| `AP_FIREHOSE_ENABLED`             | No       | `true`                  | Enable firehose processing                           |
+| `AP_FIREHOSE_CURSOR`              | No       | -                       | Cursor position to resume firehose from              |
+| `AP_MASTODON_BRIDGE_HANDLE`       | No       | `mastodon.{hostname}`   | Handle for the Mastodon bridge account               |
+| `AP_MASTODON_BRIDGE_DISPLAY_NAME` | No       | `Mastodon Bridge`       | Display name for the Mastodon bridge account         |
+| `AP_MASTODON_BRIDGE_DESCRIPTION`  | No       | _(default description)_ | Description for the Mastodon bridge account profile  |
 
 ## Usage
 

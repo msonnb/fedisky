@@ -17,13 +17,13 @@ export function setupActorDispatcher(ctx: AppContext) {
           return null
         }
 
-        // Hide the bridge account from ActivityPub - it should not be discoverable
+        // Hide the mastodon bridge account from ActivityPub - it should not be discoverable
         if (
-          ctx.bridgeAccount.isAvailable() &&
-          identifier === ctx.bridgeAccount.did
+          ctx.mastodonBridgeAccount.isAvailable() &&
+          identifier === ctx.mastodonBridgeAccount.did
         ) {
           apLogger.debug(
-            'hiding bridge account from actor dispatcher: {identifier}',
+            'hiding mastodon bridge account from actor dispatcher: {identifier}',
             {
               identifier,
             },
@@ -105,13 +105,13 @@ export function setupActorDispatcher(ctx: AppContext) {
         const hostname = ctx.cfg.service.hostname
         const handle = `${username}.${hostname === 'localhost' ? 'test' : hostname}`
 
-        // Hide the bridge account from ActivityPub handle mapping
+        // Hide the mastodon bridge account from ActivityPub handle mapping
         if (
-          ctx.bridgeAccount.isAvailable() &&
-          username === ctx.cfg.bridge.handle
+          ctx.mastodonBridgeAccount.isAvailable() &&
+          username === ctx.cfg.mastodonBridge.handle
         ) {
           apLogger.debug(
-            'hiding bridge account from handle mapping: {username} {handle}',
+            'hiding mastodon bridge account from handle mapping: {username} {handle}',
             {
               username,
               handle,
@@ -132,10 +132,13 @@ export function setupActorDispatcher(ctx: AppContext) {
           return null
         }
 
-        // Double-check: also hide if resolved DID is the bridge account
-        if (ctx.bridgeAccount.isAvailable() && did === ctx.bridgeAccount.did) {
+        // Double-check: also hide if resolved DID is the mastodon bridge account
+        if (
+          ctx.mastodonBridgeAccount.isAvailable() &&
+          did === ctx.mastodonBridgeAccount.did
+        ) {
           apLogger.debug(
-            'hiding bridge account from handle mapping (by DID): {username} {handle} {did}',
+            'hiding mastodon bridge account from handle mapping (by DID): {username} {handle} {did}',
             {
               username,
               handle,
@@ -161,13 +164,13 @@ export function setupActorDispatcher(ctx: AppContext) {
     })
     .setKeyPairsDispatcher(async (fedCtx, identifier) => {
       try {
-        // Don't generate/return keypairs for the bridge account
+        // Don't generate/return keypairs for the mastodon bridge account
         if (
-          ctx.bridgeAccount.isAvailable() &&
-          identifier === ctx.bridgeAccount.did
+          ctx.mastodonBridgeAccount.isAvailable() &&
+          identifier === ctx.mastodonBridgeAccount.did
         ) {
           apLogger.debug(
-            'not providing keypairs for bridge account: {identifier}',
+            'not providing keypairs for mastodon bridge account: {identifier}',
             {
               identifier,
             },

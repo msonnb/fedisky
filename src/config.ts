@@ -11,9 +11,9 @@ export function readEnv() {
     dbLocation: envStr('AP_DB_LOCATION'),
     firehoseEnabled: envBool('AP_FIREHOSE_ENABLED'),
     firehoseCursor: envStr('AP_FIREHOSE_CURSOR'),
-    bridgeHandle: envStr('AP_BRIDGE_HANDLE'),
-    bridgeDisplayName: envStr('AP_BRIDGE_DISPLAY_NAME'),
-    bridgeDescription: envStr('AP_BRIDGE_DESCRIPTION'),
+    mastodonBridgeHandle: envStr('AP_MASTODON_BRIDGE_HANDLE'),
+    mastodonBridgeDisplayName: envStr('AP_MASTODON_BRIDGE_DISPLAY_NAME'),
+    mastodonBridgeDescription: envStr('AP_MASTODON_BRIDGE_DESCRIPTION'),
     allowPrivateAddress: envBool('AP_ALLOW_PRIVATE_ADDRESS'),
     // Bluesky bridge account config
     blueskyBridgeHandle: envStr('AP_BLUESKY_BRIDGE_HANDLE'),
@@ -47,7 +47,8 @@ export interface APFederationConfig {
     enabled: boolean
     cursor?: number
   }
-  bridge: {
+  /** Mastodon bridge account for posting incoming Fediverse replies */
+  mastodonBridge: {
     handle: string
     email: string
     displayName: string
@@ -83,8 +84,8 @@ export function envToConfig(env: ServerEnvironment): APFederationConfig {
       ? `http://localhost:${port}`
       : `https://${hostname}`)
   const version = env.version ?? '0.0.0'
-  const bridgeHandle =
-    env.bridgeHandle ??
+  const mastodonBridgeHandle =
+    env.mastodonBridgeHandle ??
     `mastodon.${hostname === 'localhost' ? 'test' : hostname}`
   const blueskyBridgeHandle =
     env.blueskyBridgeHandle ??
@@ -107,12 +108,12 @@ export function envToConfig(env: ServerEnvironment): APFederationConfig {
       enabled: env.firehoseEnabled ?? true,
       cursor: env.firehoseCursor ? parseInt(env.firehoseCursor, 10) : undefined,
     },
-    bridge: {
-      handle: bridgeHandle,
-      email: `noreply+${bridgeHandle}@${hostname}`,
-      displayName: env.bridgeDisplayName ?? 'Mastodon Bridge',
+    mastodonBridge: {
+      handle: mastodonBridgeHandle,
+      email: `noreply+${mastodonBridgeHandle}@${hostname}`,
+      displayName: env.mastodonBridgeDisplayName ?? 'Mastodon Bridge',
       description:
-        env.bridgeDescription ??
+        env.mastodonBridgeDescription ??
         'This account posts content from Mastodon and other Fediverse servers.',
     },
     blueskyBridge: {

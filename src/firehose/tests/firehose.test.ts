@@ -6,7 +6,7 @@ import type { APDatabase } from '../../db'
 import {
   createTestDb,
   createMockPdsClient,
-  createMockBridgeAccount,
+  createMockMastodonBridgeAccount,
   createMockBlueskyBridgeAccount,
   testData,
 } from '../../test-utils'
@@ -40,7 +40,7 @@ describe('FirehoseProcessor', () => {
         }),
       })
 
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(true),
         _did: 'did:plc:bridge',
       })
@@ -48,13 +48,13 @@ describe('FirehoseProcessor', () => {
       const mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
           pds: { url: 'https://pds.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -97,7 +97,7 @@ describe('FirehoseProcessor', () => {
       const pdsClient = createMockPdsClient()
 
       const bridgeDid = 'did:plc:bridge'
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(true),
         _did: bridgeDid,
       })
@@ -105,13 +105,13 @@ describe('FirehoseProcessor', () => {
       const mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
           pds: { url: 'https://pds.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -148,7 +148,7 @@ describe('FirehoseProcessor', () => {
 
       const pdsClient = createMockPdsClient()
 
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(true),
         _did: 'did:plc:bridge',
       })
@@ -156,13 +156,13 @@ describe('FirehoseProcessor', () => {
       const mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
           pds: { url: 'https://pds.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -199,7 +199,7 @@ describe('FirehoseProcessor', () => {
 
       const pdsClient = createMockPdsClient()
 
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(true),
         _did: 'did:plc:bridge',
       })
@@ -207,13 +207,13 @@ describe('FirehoseProcessor', () => {
       const mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
           pds: { url: 'https://pds.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -249,7 +249,7 @@ describe('FirehoseProcessor', () => {
 
       const pdsClient = createMockPdsClient()
 
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(true),
         _did: 'did:plc:bridge',
       })
@@ -257,13 +257,13 @@ describe('FirehoseProcessor', () => {
       const mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
           pds: { url: 'https://pds.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -304,7 +304,7 @@ describe('FirehoseProcessor', () => {
 
       const pdsClient = createMockPdsClient()
 
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(true),
         _did: 'did:plc:bridge',
       })
@@ -312,13 +312,13 @@ describe('FirehoseProcessor', () => {
       const mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
           pds: { url: 'https://pds.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -362,7 +362,7 @@ describe('FirehoseProcessor', () => {
 
       const pdsClient = createMockPdsClient()
 
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(true),
         _did: 'did:plc:bridge',
       })
@@ -370,13 +370,13 @@ describe('FirehoseProcessor', () => {
       const mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
           pds: { url: 'https://pds.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -411,7 +411,7 @@ describe('FirehoseProcessor', () => {
 
       const pdsClient = createMockPdsClient()
 
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(true),
         _did: bridgeDid,
       })
@@ -419,13 +419,13 @@ describe('FirehoseProcessor', () => {
       const mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
           pds: { url: 'https://pds.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -477,7 +477,7 @@ describe('FirehoseProcessor', () => {
         }),
       })
 
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(true),
         _did: 'did:plc:bridge',
       })
@@ -485,13 +485,13 @@ describe('FirehoseProcessor', () => {
       const mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
           pds: { url: 'https://pds.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -545,7 +545,7 @@ describe('FirehoseProcessor', () => {
         getAccount: vi.fn().mockResolvedValue(null),
       })
 
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(true),
         _did: 'did:plc:bridge',
       })
@@ -553,13 +553,13 @@ describe('FirehoseProcessor', () => {
       const mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
           pds: { url: 'https://pds.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -596,7 +596,7 @@ describe('FirehoseProcessor', () => {
 
       const pdsClient = createMockPdsClient()
 
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(true),
         _did: 'did:plc:bridge',
       })
@@ -606,13 +606,13 @@ describe('FirehoseProcessor', () => {
       const mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
           pds: { url: 'https://pds.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -655,7 +655,7 @@ describe('FirehoseProcessor', () => {
 
       const pdsClient = createMockPdsClient()
 
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(true),
         _did: 'did:plc:bridge',
       })
@@ -663,13 +663,13 @@ describe('FirehoseProcessor', () => {
       const mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
           pds: { url: 'https://pds.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 

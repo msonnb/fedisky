@@ -4,16 +4,22 @@ import { APFederationConfig } from '../config'
 import { APDatabase } from '../db'
 import { apLogger } from '../logger'
 import { PDSClient } from '../pds-client'
+import { AccountDatabaseOps, BridgeAccountConfig } from './types'
 
-export class BridgeAccountManager {
-  private cfg: APFederationConfig
-  private db: APDatabase
-  private pdsClient: PDSClient
+export abstract class BaseAccountManager {
+  protected cfg: APFederationConfig
+  protected db: APDatabase
+  protected pdsClient: PDSClient
   private _available: boolean = false
   private _did: string | null = null
   private _handle: string | null = null
   private _accessJwt: string | null = null
   private _refreshJwt: string | null = null
+
+  protected abstract readonly accountName: string
+  protected abstract readonly disabledFeatureMsg: string
+  protected abstract getAccountConfig(): BridgeAccountConfig
+  protected abstract getDbOps(): AccountDatabaseOps
 
   constructor(cfg: APFederationConfig, db: APDatabase, pdsClient: PDSClient) {
     this.cfg = cfg
@@ -34,12 +40,14 @@ export class BridgeAccountManager {
   }
 
   async initialize(): Promise<void> {
+    const dbOps = this.getDbOps()
+
     try {
-      const existing = await this.db.getBridgeAccount()
+      const existing = await dbOps.get()
 
       if (existing) {
         apLogger.info(
-          'found existing bridge account in database: {did} {handle}',
+          `found existing ${this.accountName} account in database`,
           {
             did: existing.did,
             handle: existing.handle,
@@ -49,12 +57,10 @@ export class BridgeAccountManager {
         const account = await this.pdsClient.getAccount(existing.did)
         if (!account) {
           apLogger.warn(
-            'bridge account no longer exists on PDS, will recreate: {did}',
-            {
-              did: existing.did,
-            },
+            `${this.accountName} account no longer exists on PDS, will recreate`,
+            { did: existing.did },
           )
-          await this.db.deleteBridgeAccount()
+          await dbOps.delete()
         } else {
           try {
             await this.refreshSession(existing.refreshJwt)
@@ -62,19 +68,14 @@ export class BridgeAccountManager {
             this._handle = existing.handle
             this._available = true
             apLogger.info(
-              'bridge account session refreshed successfully: {did} {handle}',
-              {
-                did: this._did,
-                handle: this._handle,
-              },
+              `${this.accountName} account session refreshed successfully`,
+              { did: this._did, handle: this._handle },
             )
             return
           } catch (refreshErr) {
             apLogger.warn(
-              'failed to refresh bridge account session, will try to login: {err}',
-              {
-                err: refreshErr,
-              },
+              `failed to refresh ${this.accountName} account session, will try to login`,
+              { err: refreshErr },
             )
 
             try {
@@ -87,14 +88,11 @@ export class BridgeAccountManager {
               this._did = session.did
               this._handle = session.handle
 
-              await this.db.updateBridgeAccountTokens(
-                session.accessJwt,
-                session.refreshJwt,
-              )
+              await dbOps.updateTokens(session.accessJwt, session.refreshJwt)
 
               this._available = true
               apLogger.info(
-                'bridge account logged in successfully: {did} {handle}',
+                `${this.accountName} account logged in successfully`,
                 {
                   did: this._did,
                   handle: this._handle,
@@ -103,48 +101,41 @@ export class BridgeAccountManager {
               return
             } catch (loginErr) {
               apLogger.warn(
-                'failed to login to bridge account, will recreate: {err}',
-                {
-                  err: loginErr,
-                },
+                `failed to login to ${this.accountName} account, will recreate`,
+                { err: loginErr },
               )
-              await this.db.deleteBridgeAccount()
+              await dbOps.delete()
             }
           }
         }
       }
 
-      await this.createBridgeAccount()
+      await this.createAccount()
     } catch (err) {
       apLogger.error(
-        'failed to initialize bridge account - incoming replies will be disabled: {err}',
+        `failed to initialize ${this.accountName} account - ${this.disabledFeatureMsg}`,
         { err },
       )
       this._available = false
     }
   }
 
-  private async createBridgeAccount(): Promise<void> {
-    const { handle, email, displayName, description } = this.cfg.bridge
+  private async createAccount(): Promise<void> {
+    const dbOps = this.getDbOps()
+    const { handle, email, displayName, description } = this.getAccountConfig()
 
-    apLogger.info('creating new bridge account: {handle} {email}', {
-      handle,
-      email,
-    })
+    apLogger.info(`creating new ${this.accountName} account`, { handle, email })
 
     const password = crypto.randomBytes(32).toString('hex')
 
     let inviteCode: string | undefined
     try {
       inviteCode = await this.pdsClient.createInviteCode(1)
-      apLogger.debug('created invite code for bridge account')
+      apLogger.debug(`created invite code for ${this.accountName} account`)
     } catch (err) {
-      apLogger.debug(
-        'could not create invite code (invites may be disabled): {err}',
-        {
-          err,
-        },
-      )
+      apLogger.debug('could not create invite code (invites may be disabled)', {
+        err,
+      })
     }
 
     try {
@@ -160,7 +151,7 @@ export class BridgeAccountManager {
       this._accessJwt = result.accessJwt
       this._refreshJwt = result.refreshJwt
 
-      await this.db.saveBridgeAccount({
+      await dbOps.save({
         did: result.did,
         handle: result.handle,
         password,
@@ -170,7 +161,7 @@ export class BridgeAccountManager {
         updatedAt: new Date().toISOString(),
       })
 
-      apLogger.info('bridge account created successfully: {did} {handle}', {
+      apLogger.info(`${this.accountName} account created successfully`, {
         did: this._did,
         handle: this._handle,
       })
@@ -179,10 +170,11 @@ export class BridgeAccountManager {
 
       this._available = true
     } catch (err) {
-      apLogger.error(
-        'failed to create bridge account: {handle} {email} {err}',
-        { err, handle, email },
-      )
+      apLogger.error(`failed to create ${this.accountName} account`, {
+        err,
+        handle,
+        email,
+      })
       throw err
     }
   }
@@ -212,10 +204,10 @@ export class BridgeAccountManager {
       }
 
       const profileRecord = {
+        ...(existingProfile || {}),
         $type: 'app.bsky.actor.profile',
         displayName,
         description,
-        ...(existingProfile || {}),
       }
 
       await agent.com.atproto.repo.putRecord({
@@ -225,23 +217,28 @@ export class BridgeAccountManager {
         record: profileRecord,
       })
 
-      apLogger.info('bridge account profile set up: {did}', { did: this._did })
+      apLogger.info(`${this.accountName} account profile set up`, {
+        did: this._did,
+      })
     } catch (err) {
-      apLogger.warn('failed to set up bridge account profile: {err}', { err })
+      apLogger.warn(`failed to set up ${this.accountName} account profile`, {
+        err,
+      })
     }
   }
 
   private async refreshSession(refreshJwt: string): Promise<void> {
+    const dbOps = this.getDbOps()
     const tokens = await this.pdsClient.refreshSession(refreshJwt)
     this._accessJwt = tokens.accessJwt
     this._refreshJwt = tokens.refreshJwt
 
-    await this.db.updateBridgeAccountTokens(tokens.accessJwt, tokens.refreshJwt)
+    await dbOps.updateTokens(tokens.accessJwt, tokens.refreshJwt)
   }
 
   async getAgent(): Promise<AtpAgent> {
     if (!this._available || !this._accessJwt) {
-      throw new Error('Bridge account is not available')
+      throw new Error(`${this.accountName} account is not available`)
     }
 
     return this.pdsClient.createAuthenticatedAgent(this._accessJwt)
@@ -253,7 +250,7 @@ export class BridgeAccountManager {
     rkey?: string,
   ): Promise<{ uri: string; cid: string }> {
     if (!this._available || !this._did) {
-      throw new Error('Bridge account is not available')
+      throw new Error(`${this.accountName} account is not available`)
     }
 
     const agent = await this.getAgent()
@@ -298,7 +295,7 @@ export class BridgeAccountManager {
 
   async uploadBlob(data: Uint8Array, mimeType: string): Promise<BlobRef> {
     if (!this._available) {
-      throw new Error('Bridge account is not available')
+      throw new Error(`${this.accountName} account is not available`)
     }
 
     const agent = await this.getAgent()

@@ -8,7 +8,7 @@ import type { APDatabase } from '../../db'
 import {
   createTestDb,
   createMockPdsClient,
-  createMockBridgeAccount,
+  createMockMastodonBridgeAccount,
   testData,
 } from '../../test-utils'
 import { setupInboxListeners } from '../inbox'
@@ -87,18 +87,18 @@ describe('inbox', () => {
       federation.setActorDispatcher('/users/{identifier}', () => null)
 
       const pdsClient = createMockPdsClient()
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(false),
       })
 
       mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -138,18 +138,18 @@ describe('inbox', () => {
       federation.setActorDispatcher('/users/{identifier}', () => null)
 
       const pdsClient = createMockPdsClient()
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(false),
       })
 
       mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -180,18 +180,18 @@ describe('inbox', () => {
       federation.setActorDispatcher('/users/{identifier}', () => null)
 
       const pdsClient = createMockPdsClient()
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(false),
       })
 
       mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -245,7 +245,7 @@ describe('inbox', () => {
         }),
       })
 
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(true),
         createRecord: vi.fn().mockResolvedValue({
           uri: 'at://did:plc:bridge/app.bsky.feed.post/reply123',
@@ -256,11 +256,11 @@ describe('inbox', () => {
       mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -289,7 +289,7 @@ describe('inbox', () => {
 
       await invokeInboxListener(federation, 'Create', create)
 
-      expect(bridgeAccount.createRecord).toHaveBeenCalledWith(
+      expect(mastodonBridgeAccount.createRecord).toHaveBeenCalledWith(
         'app.bsky.feed.post',
         expect.objectContaining({
           text: expect.stringContaining('bob'),
@@ -320,7 +320,7 @@ describe('inbox', () => {
         }),
       })
 
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(true),
         createRecord: vi.fn().mockResolvedValue({
           uri: bridgePostUri,
@@ -331,11 +331,11 @@ describe('inbox', () => {
       mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -380,18 +380,18 @@ describe('inbox', () => {
       federation.setActorDispatcher('/users/{identifier}', () => null)
 
       const pdsClient = createMockPdsClient()
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(true),
       })
 
       mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -418,7 +418,7 @@ describe('inbox', () => {
 
       await invokeInboxListener(federation, 'Create', create)
 
-      expect(bridgeAccount.createRecord).not.toHaveBeenCalled()
+      expect(mastodonBridgeAccount.createRecord).not.toHaveBeenCalled()
     })
 
     it('should skip Create when bridge account is not available', async () => {
@@ -427,18 +427,18 @@ describe('inbox', () => {
       federation.setObjectDispatcher(Note, '/posts/{uri}', () => null)
 
       const pdsClient = createMockPdsClient()
-      const bridgeAccount = createMockBridgeAccount({
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
         isAvailable: vi.fn().mockReturnValue(false),
       })
 
       mockCtx = {
         db,
         pdsClient,
-        bridgeAccount,
+        mastodonBridgeAccount,
         federation,
         cfg: {
           service: { publicUrl: 'https://ap.example' },
-          bridge: { handle: 'bridge.test' },
+          mastodonBridge: { handle: 'bridge.test' },
         },
       } as unknown as AppContext
 
@@ -467,7 +467,7 @@ describe('inbox', () => {
 
       await invokeInboxListener(federation, 'Create', create)
 
-      expect(bridgeAccount.createRecord).not.toHaveBeenCalled()
+      expect(mastodonBridgeAccount.createRecord).not.toHaveBeenCalled()
     })
   })
 })

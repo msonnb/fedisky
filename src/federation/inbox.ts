@@ -21,9 +21,9 @@ export function setupInboxListeners(ctx: AppContext) {
   ctx.federation
     .setInboxListeners('/users/{+identifier}/inbox', '/inbox')
     .setSharedKeyDispatcher(async () => {
-      // Use the bridge account as the instance actor for signing shared inbox fetches
-      const bridgeDid = ctx.bridgeAccount.did
-      if (!ctx.bridgeAccount.isAvailable() || bridgeDid === null) {
+      // Use the mastodon bridge account as the instance actor for signing shared inbox fetches
+      const bridgeDid = ctx.mastodonBridgeAccount.did
+      if (!ctx.mastodonBridgeAccount.isAvailable() || bridgeDid === null) {
         return null
       }
       return { identifier: bridgeDid }
@@ -127,9 +127,9 @@ export function setupInboxListeners(ctx: AppContext) {
     })
     .on(Create, async (fedCtx, create) => {
       try {
-        if (!ctx.bridgeAccount.isAvailable()) {
+        if (!ctx.mastodonBridgeAccount.isAvailable()) {
           apLogger.warn(
-            'skipping incoming create: bridge account not configured {createId}',
+            'skipping incoming create: mastodon bridge account not configured {createId}',
             {
               createId: create.id?.href,
             },
@@ -222,7 +222,7 @@ export function setupInboxListeners(ctx: AppContext) {
           {
             pdsClient: ctx.pdsClient,
             uploadBlob: (data, mimeType) =>
-              ctx.bridgeAccount.uploadBlob(data, mimeType),
+              ctx.mastodonBridgeAccount.uploadBlob(data, mimeType),
           },
         )
 
@@ -263,7 +263,7 @@ export function setupInboxListeners(ctx: AppContext) {
           parent: parentRef,
         }
 
-        const result = await ctx.bridgeAccount.createRecord(
+        const result = await ctx.mastodonBridgeAccount.createRecord(
           'app.bsky.feed.post',
           postRecord,
         )
@@ -288,9 +288,9 @@ export function setupInboxListeners(ctx: AppContext) {
         }
 
         apLogger.info(
-          'created reply post from ActivityPub via bridge account: {bridgeAccountDid} {postAuthorDid} {actorHandle} {noteId} {postUri}',
+          'created reply post from ActivityPub via mastodon bridge account: {bridgeAccountDid} {postAuthorDid} {actorHandle} {noteId} {postUri}',
           {
-            bridgeAccountDid: ctx.bridgeAccount.did,
+            bridgeAccountDid: ctx.mastodonBridgeAccount.did,
             postAuthorDid,
             actorHandle,
             noteId: object.id?.href,
