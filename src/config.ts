@@ -89,7 +89,7 @@ export function envToConfig(env: ServerEnvironment): APFederationConfig {
     `mastodon.${hostname === 'localhost' ? 'test' : hostname}`
   const blueskyBridgeHandle =
     env.blueskyBridgeHandle ??
-    `relay.${hostname === 'localhost' ? 'test' : hostname}`
+    `bluesky.${hostname === 'localhost' ? 'test' : hostname}`
   return {
     service: {
       port,

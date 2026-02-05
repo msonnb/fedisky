@@ -220,6 +220,25 @@ AP_CONFIG
   # Read the admin email from existing Caddyfile or use a default
   ADMIN_EMAIL=$(grep -oP '^\s*email\s+\K[^\s]+' "${CADDYFILE}" 2>/dev/null || echo "admin@${PDS_HOSTNAME}")
 
+  # Build the Caddyfile content
+  # When AP_HOSTNAME differs from PDS_HOSTNAME, we add a separate site block for it
+  if [[ "${AP_HOSTNAME}" != "${PDS_HOSTNAME}" ]]; then
+    AP_SITE_BLOCK="
+${AP_HOSTNAME} {
+	tls {
+		on_demand
+	}
+	import activitypub_routes
+	# Return 404 for non-ActivityPub requests on this hostname
+	handle {
+		respond \"Not Found\" 404
+	}
+}
+"
+  else
+    AP_SITE_BLOCK=""
+  fi
+
   cat <<CADDYFILE_CONTENT >"${CADDYFILE}"
 {
 	email ${ADMIN_EMAIL}
@@ -228,14 +247,10 @@ AP_CONFIG
 	}
 }
 
-*.${PDS_HOSTNAME}, ${PDS_HOSTNAME} {
-	tls {
-		on_demand
-	}
-
-	# ActivityPub routes - proxy to sidecar
+# Snippet for ActivityPub routing to sidecar
+(activitypub_routes) {
 	@activitypub {
-		path /users/* /posts/* /.well-known/webfinger* /.well-known/nodeinfo* /nodeinfo/*
+		path /users/* /posts/* /.well-known/webfinger* /.well-known/nodeinfo* /nodeinfo/* /inbox
 	}
 	handle @activitypub {
 		reverse_proxy http://localhost:${AP_PORT} {
@@ -244,7 +259,6 @@ AP_CONFIG
 		}
 	}
 
-	# Accept header based routing for ActivityPub
 	@activitypub_accept {
 		header Accept *application/activity+json*
 		not path /xrpc/*
@@ -255,6 +269,13 @@ AP_CONFIG
 			header_up X-Forwarded-Host {host}
 		}
 	}
+}
+${AP_SITE_BLOCK}
+*.${PDS_HOSTNAME}, ${PDS_HOSTNAME} {
+	tls {
+		on_demand
+	}
+	import activitypub_routes
 
 	# Default: proxy to PDS
 	handle {
