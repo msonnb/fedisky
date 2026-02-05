@@ -7,7 +7,7 @@ import {
   postConverter,
   repostConverter,
 } from '../conversion'
-import { apLogger } from '../logger'
+import { getWideEvent } from '../logging'
 
 export const recordConverterRegistry = new RecordConverterRegistry()
 recordConverterRegistry.register(postConverter)
@@ -19,6 +19,11 @@ export function setupOutboxDispatcher(ctx: AppContext) {
     .setOutboxDispatcher(
       '/users/{+identifier}/outbox',
       async (fedCtx, identifier, cursor) => {
+        const event = getWideEvent()
+        event?.set('dispatch.type', 'outbox')
+        event?.set('actor.identifier', identifier)
+        event?.set('outbox.cursor', cursor)
+
         try {
           const limit = 50
           const collections = recordConverterRegistry
@@ -59,6 +64,7 @@ export function setupOutboxDispatcher(ctx: AppContext) {
             nextCursor = new AtUri(lastRecord.uri).rkey
           }
 
+          let conversionErrors = 0
           const items = await Promise.all(
             records.map(async (record) => {
               try {
@@ -67,12 +73,6 @@ export function setupOutboxDispatcher(ctx: AppContext) {
                   atUri.collection,
                 )
                 if (!recordConverter) {
-                  apLogger.debug(
-                    'no converter found for collection: {collection}',
-                    {
-                      collection: atUri.collection,
-                    },
-                  )
                   return null
                 }
 
@@ -89,14 +89,8 @@ export function setupOutboxDispatcher(ctx: AppContext) {
                 }
 
                 return conversionResult.activity
-              } catch (err) {
-                apLogger.warn(
-                  'failed to convert record to activity: {uri} {err}',
-                  {
-                    err,
-                    uri: record.uri,
-                  },
-                )
+              } catch {
+                conversionErrors++
                 return null
               }
             }),
@@ -105,32 +99,30 @@ export function setupOutboxDispatcher(ctx: AppContext) {
           const filteredItems = items.filter(
             (item): item is NonNullable<typeof item> => item !== null,
           )
-          apLogger.debug(
-            'dispatching outbox: {identifier} {itemCount} items, cursor={cursor}',
-            {
-              identifier,
-              itemCount: filteredItems.length,
-              cursor,
-            },
-          )
+
+          event?.set('outbox.item_count', filteredItems.length)
+          event?.set('outbox.next_cursor', nextCursor)
+          if (conversionErrors > 0) {
+            event?.set('outbox.conversion_errors', conversionErrors)
+          }
+          event?.set('dispatch.result', 'success')
+
           return {
             items: filteredItems,
             nextCursor,
           }
         } catch (err) {
-          apLogger.warn(
-            'failed to dispatch outbox: {identifier} {cursor} {err}',
-            {
-              err,
-              identifier,
-              cursor,
-            },
-          )
+          event?.setError(err instanceof Error ? err : new Error(String(err)))
+          event?.set('dispatch.result', 'error')
           return { items: [], nextCursor: null }
         }
       },
     )
     .setCounter(async (fedCtx, identifier) => {
+      const event = getWideEvent()
+      event?.set('dispatch.type', 'outbox_count')
+      event?.set('actor.identifier', identifier)
+
       try {
         let total = 0
         for (const converter of recordConverterRegistry.getAll()) {
@@ -141,12 +133,12 @@ export function setupOutboxDispatcher(ctx: AppContext) {
           )
           total += records.length
         }
+        event?.set('outbox.total_count', total)
+        event?.set('dispatch.result', 'success')
         return total
       } catch (err) {
-        apLogger.warn('failed to count outbox items: {identifier} {err}', {
-          err,
-          identifier,
-        })
+        event?.setError(err instanceof Error ? err : new Error(String(err)))
+        event?.set('dispatch.result', 'error')
         return 0
       }
     })
@@ -156,16 +148,20 @@ export function setupOutboxDispatcher(ctx: AppContext) {
     Note,
     '/posts/{+uri}',
     async (fedCtx, values) => {
+      const event = getWideEvent()
+      event?.set('dispatch.type', 'object')
+      event?.set('object.uri', values.uri)
+
       try {
         const atUri = new AtUri(values.uri)
         const identifier = atUri.hostname
+        event?.set('actor.identifier', identifier)
+        event?.set('object.collection', atUri.collection)
+
         const recordConverter = recordConverterRegistry.get(atUri.collection)
 
         if (!recordConverter) {
-          apLogger.debug('no converter found for object: {uri} {collection}', {
-            uri: values.uri,
-            collection: atUri.collection,
-          })
+          event?.set('dispatch.result', 'no_converter')
           return null
         }
 
@@ -176,9 +172,7 @@ export function setupOutboxDispatcher(ctx: AppContext) {
         )
 
         if (!record) {
-          apLogger.debug('record not found for object: {uri}', {
-            uri: values.uri,
-          })
+          event?.set('dispatch.result', 'not_found')
           return null
         }
 
@@ -191,19 +185,15 @@ export function setupOutboxDispatcher(ctx: AppContext) {
         )
 
         if (!conversionResult) {
-          apLogger.debug('conversion failed for object: {uri}', {
-            uri: values.uri,
-          })
+          event?.set('dispatch.result', 'conversion_failed')
           return null
         }
 
-        apLogger.debug('dispatching object: {uri}', { uri: values.uri })
+        event?.set('dispatch.result', 'success')
         return conversionResult.object
       } catch (err) {
-        apLogger.warn('failed to dispatch object: {uri} {err}', {
-          err,
-          uri: values.uri,
-        })
+        event?.setError(err instanceof Error ? err : new Error(String(err)))
+        event?.set('dispatch.result', 'error')
         return null
       }
     },

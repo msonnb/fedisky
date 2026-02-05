@@ -2,7 +2,7 @@ import { AtpAgent } from '@atproto/api'
 import { AccountView } from '@atproto/api/dist/client/types/com/atproto/admin/defs'
 import { Main as ProfileRecord } from '@atproto/bsky/dist/lexicon/types/app/bsky/actor/profile'
 import { APFederationConfig } from '../config'
-import { apLogger } from '../logger'
+import { logger } from '../logger'
 
 export interface RecordResult {
   uri: string
@@ -121,7 +121,7 @@ export class PDSClient {
       if (isNotFoundError(err)) {
         return null
       }
-      apLogger.warn('failed to resolve handle: {handle} {err}', { err, handle })
+      logger.warn('failed to resolve handle: {handle} {err}', { err, handle })
       return null
     }
   }
@@ -136,7 +136,7 @@ export class PDSClient {
       if (isNotFoundError(err)) {
         return null
       }
-      apLogger.warn('failed to get account: {did} {err}', { err, did })
+      logger.warn('failed to get account: {did} {err}', { err, did })
       throw err
     }
   }
@@ -175,7 +175,7 @@ export class PDSClient {
       } while (cursor)
       return activeRepoCount
     } catch (err) {
-      apLogger.warn('failed to get account count: {err}', { err })
+      logger.warn('failed to get account count: {err}', { err })
       return 0
     }
   }
@@ -192,7 +192,7 @@ export class PDSClient {
       if (isNotFoundError(err)) {
         return null
       }
-      apLogger.warn('failed to get profile: {did} {err}', { err, did })
+      logger.warn('failed to get profile: {did} {err}', { err, did })
       return null
     }
   }

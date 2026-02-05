@@ -4,7 +4,8 @@ import { Create, Note, PUBLIC_COLLECTION } from '@fedify/vocab'
 import { Temporal } from '@js-temporal/polyfill'
 import escapeHtml from 'escape-html'
 import type { AppContext } from '../context'
-import { apLogger } from '../logger'
+import { logger } from '../logger'
+import { createWideEvent } from '../logging'
 import { ConstellationClient } from './client'
 
 const BATCH_SIZE = 50
@@ -30,7 +31,7 @@ export class ConstellationProcessor {
     }
 
     this.running = true
-    apLogger.info('starting constellation processor', {
+    logger.info('constellation processor starting', {
       pollInterval: this.ctx.cfg.constellation.pollInterval,
     })
 
@@ -38,7 +39,7 @@ export class ConstellationProcessor {
   }
 
   async stop(): Promise<void> {
-    apLogger.info('stopping constellation processor')
+    logger.info('constellation processor stopping')
     this.running = false
 
     if (this.pollTimer) {
@@ -54,33 +55,42 @@ export class ConstellationProcessor {
       try {
         await this.poll()
       } catch (err) {
-        apLogger.error('constellation poll failed', { err })
+        logger.error('constellation poll failed', { err })
       }
       this.schedulePoll()
     }, this.ctx.cfg.constellation.pollInterval)
   }
 
   private async poll(): Promise<void> {
+    const event = createWideEvent('constellation_poll')
+
     const posts = await this.ctx.db.getMonitoredPostsBatch(BATCH_SIZE)
+    event.set('poll.post_count', posts.length)
 
     if (posts.length === 0) {
-      apLogger.debug('no monitored posts to check')
+      event.setOutcome('success').emit()
       return
     }
 
-    apLogger.debug('checking monitored posts', { count: posts.length })
+    let checkedCount = 0
+    let errorCount = 0
 
     for (const post of posts) {
       try {
         await this.checkPostForReplies(post.atUri, post.authorDid)
         await this.ctx.db.updateMonitoredPostLastChecked(post.atUri)
-      } catch (err) {
-        apLogger.warn('failed to check post for replies', {
-          err,
-          atUri: post.atUri,
-        })
+        checkedCount++
+      } catch {
+        errorCount++
       }
     }
+
+    event.set('poll.checked_count', checkedCount)
+    if (errorCount > 0) {
+      event.set('poll.error_count', errorCount)
+    }
+    event.setOutcome(errorCount === 0 ? 'success' : 'error')
+    event.emit()
   }
 
   private async checkPostForReplies(
@@ -95,17 +105,8 @@ export class ConstellationProcessor {
       return
     }
 
-    apLogger.debug('found replies to monitored post', {
-      postAtUri,
-      replyCount: backlinks.length,
-    })
-
     for (const reply of backlinks) {
-      try {
-        await this.processReply(reply.uri, postAtUri, postAuthorDid)
-      } catch (err) {
-        apLogger.warn('failed to process reply', { err, replyUri: reply.uri })
-      }
+      await this.processReply(reply.uri, postAtUri, postAuthorDid)
     }
   }
 
@@ -114,145 +115,161 @@ export class ConstellationProcessor {
     parentAtUri: string,
     parentAuthorDid: string,
   ): Promise<void> {
-    const existing = await this.ctx.db.getExternalReply(replyAtUri)
-    if (existing) {
-      return
-    }
-
-    const replyUri = new AtUri(replyAtUri)
-    const replyAuthorDid = replyUri.host
-
-    // Skip if the author is a local PDS user (firehose processor handles those)
-    const localAccount = await this.ctx.pdsClient.getAccount(replyAuthorDid)
-    if (localAccount) {
-      apLogger.debug('skipping reply from local user', {
-        replyAtUri,
-        replyAuthorDid,
-      })
-      return
-    }
-
-    if (
-      (this.ctx.mastodonBridgeAccount.isAvailable() &&
-        replyAuthorDid === this.ctx.mastodonBridgeAccount.did) ||
-      (this.ctx.blueskyBridgeAccount.isAvailable() &&
-        replyAuthorDid === this.ctx.blueskyBridgeAccount.did)
-    ) {
-      apLogger.debug('skipping reply from bridge account', {
-        replyAtUri,
-        replyAuthorDid,
-      })
-      return
-    }
-
-    const record = await this.ctx.appViewClient.getRecord(
-      replyAuthorDid,
-      'app.bsky.feed.post',
-      replyUri.rkey,
-    )
-
-    if (!record) {
-      apLogger.warn('could not fetch reply record from appview', { replyAtUri })
-      return
-    }
-
-    const profile = await this.ctx.appViewClient.getProfile(replyAuthorDid)
-
-    const replyValue = record.value as {
-      text?: string
-      createdAt?: string
-    }
-
-    let authorHandle: string = replyAuthorDid
-    if (profile?.handle) {
-      authorHandle = `@${profile.handle}`
-    } else {
-      try {
-        const resolvedHandle =
-          await this.ctx.appViewClient.resolveHandle(replyAuthorDid)
-        if (resolvedHandle) {
-          authorHandle = `@${resolvedHandle}`
-        }
-      } catch {
-        // Keep using DID as fallback
-      }
-    }
-
-    const authorProfileUrl = `https://bsky.app/profile/${replyAuthorDid}`
-    const authorLink = `<a href="${authorProfileUrl}">${authorHandle}</a>`
-    const attributionHtml = `<p>${authorLink} replied:</p>`
-    const contentHtml = `<p>${escapeHtml(replyValue.text ?? '')}</p>`
-
-    const fedifyContext = this.ctx.federation.createContext(
-      new URL(this.ctx.cfg.service.publicUrl),
-    )
-
-    const blueskyBridgeDid = this.ctx.blueskyBridgeAccount.did
-    if (!blueskyBridgeDid) {
-      apLogger.warn('bluesky bridge account not available')
-      return
-    }
-
-    const noteId = new URL(
-      `/posts/${encodeURIComponent(replyAtUri)}`,
-      this.ctx.cfg.service.publicUrl,
-    )
-
-    const parentNoteId = new URL(
-      `/posts/${encodeURIComponent(parentAtUri)}`,
-      this.ctx.cfg.service.publicUrl,
-    )
-
-    const note = new Note({
-      id: noteId,
-      attribution: fedifyContext.getActorUri(blueskyBridgeDid),
-      content: attributionHtml + contentHtml,
-      replyTarget: parentNoteId,
-      published: replyValue.createdAt
-        ? Temporal.Instant.from(replyValue.createdAt)
-        : null,
-      to: PUBLIC_COLLECTION,
-      cc: fedifyContext.getFollowersUri(parentAuthorDid),
-    })
-
-    const activity = new Create({
-      id: new URL(`#create-${crypto.randomUUID()}`, noteId),
-      actor: fedifyContext.getActorUri(blueskyBridgeDid),
-      object: note,
-      to: PUBLIC_COLLECTION,
-      cc: fedifyContext.getFollowersUri(parentAuthorDid),
-    })
-
-    // Send to all followers of the parent post author
-    const followers = await this.ctx.db.getFollowers(parentAuthorDid)
+    const event = createWideEvent('constellation_reply')
+      .set('reply.uri', replyAtUri)
+      .set('reply.parent_uri', parentAtUri)
+      .set('reply.parent_author', parentAuthorDid)
 
     try {
-      await fedifyContext.sendActivity(
-        { identifier: blueskyBridgeDid },
-        followers.map((follower) => ({
-          id: new URL(follower.actorUri),
-          inboxId: new URL(follower.actorInbox),
-        })),
-        activity,
+      const existing = await this.ctx.db.getExternalReply(replyAtUri)
+      if (existing) {
+        event.setOutcome('ignored').set('ignored_reason', 'already_processed')
+        event.emit()
+        return
+      }
+
+      const replyUri = new AtUri(replyAtUri)
+      const replyAuthorDid = replyUri.host
+      event.set('reply.author_did', replyAuthorDid)
+
+      // Skip if the author is a local PDS user (firehose processor handles those)
+      const localAccount = await this.ctx.pdsClient.getAccount(replyAuthorDid)
+      if (localAccount) {
+        event.setOutcome('ignored').set('ignored_reason', 'local_user')
+        event.emit()
+        return
+      }
+
+      if (
+        (this.ctx.mastodonBridgeAccount.isAvailable() &&
+          replyAuthorDid === this.ctx.mastodonBridgeAccount.did) ||
+        (this.ctx.blueskyBridgeAccount.isAvailable() &&
+          replyAuthorDid === this.ctx.blueskyBridgeAccount.did)
+      ) {
+        event.setOutcome('ignored').set('ignored_reason', 'bridge_account')
+        event.emit()
+        return
+      }
+
+      const record = await this.ctx.appViewClient.getRecord(
+        replyAuthorDid,
+        'app.bsky.feed.post',
+        replyUri.rkey,
       )
+
+      if (!record) {
+        event.setOutcome('error').set('error_reason', 'record_not_found')
+        event.emit()
+        return
+      }
+
+      const profile = await this.ctx.appViewClient.getProfile(replyAuthorDid)
+
+      const replyValue = record.value as {
+        text?: string
+        createdAt?: string
+      }
+
+      let authorHandle: string = replyAuthorDid
+      if (profile?.handle) {
+        authorHandle = `@${profile.handle}`
+      } else {
+        try {
+          const resolvedHandle =
+            await this.ctx.appViewClient.resolveHandle(replyAuthorDid)
+          if (resolvedHandle) {
+            authorHandle = `@${resolvedHandle}`
+          }
+        } catch {
+          // Keep using DID as fallback
+        }
+      }
+
+      event.set('reply.author_handle', authorHandle)
+
+      const authorProfileUrl = `https://bsky.app/profile/${replyAuthorDid}`
+      const authorLink = `<a href="${authorProfileUrl}">${authorHandle}</a>`
+      const attributionHtml = `<p>${authorLink} replied:</p>`
+      const contentHtml = `<p>${escapeHtml(replyValue.text ?? '')}</p>`
+
+      const fedifyContext = this.ctx.federation.createContext(
+        new URL(this.ctx.cfg.service.publicUrl),
+      )
+
+      const blueskyBridgeDid = this.ctx.blueskyBridgeAccount.did
+      if (!blueskyBridgeDid) {
+        event.setOutcome('error').set('error_reason', 'bridge_not_available')
+        event.emit()
+        return
+      }
+
+      const noteId = new URL(
+        `/posts/${encodeURIComponent(replyAtUri)}`,
+        this.ctx.cfg.service.publicUrl,
+      )
+
+      const parentNoteId = new URL(
+        `/posts/${encodeURIComponent(parentAtUri)}`,
+        this.ctx.cfg.service.publicUrl,
+      )
+
+      const note = new Note({
+        id: noteId,
+        attribution: fedifyContext.getActorUri(blueskyBridgeDid),
+        content: attributionHtml + contentHtml,
+        replyTarget: parentNoteId,
+        published: replyValue.createdAt
+          ? Temporal.Instant.from(replyValue.createdAt)
+          : null,
+        to: PUBLIC_COLLECTION,
+        cc: fedifyContext.getFollowersUri(parentAuthorDid),
+      })
+
+      const activity = new Create({
+        id: new URL(`#create-${crypto.randomUUID()}`, noteId),
+        actor: fedifyContext.getActorUri(blueskyBridgeDid),
+        object: note,
+        to: PUBLIC_COLLECTION,
+        cc: fedifyContext.getFollowersUri(parentAuthorDid),
+      })
+
+      event.set('activity.note_id', noteId.href)
+
+      // Send to all followers of the parent post author
+      const followers = await this.ctx.db.getFollowers(parentAuthorDid)
+      event.set('send.follower_count', followers.length)
+
+      let sentToFollowers = false
+      try {
+        await fedifyContext.sendActivity(
+          { identifier: blueskyBridgeDid },
+          followers.map((follower) => ({
+            id: new URL(follower.actorUri),
+            inboxId: new URL(follower.actorInbox),
+          })),
+          activity,
+        )
+        sentToFollowers = true
+      } catch (err) {
+        event.set('send.error', String(err))
+      }
+
+      event.set('send.sent_to_followers', sentToFollowers)
+
+      await this.ctx.db.createExternalReply({
+        atUri: replyAtUri,
+        parentAtUri,
+        authorDid: replyAuthorDid,
+        apNoteId: noteId.href,
+        createdAt: new Date().toISOString(),
+      })
+
+      event.setOutcome(sentToFollowers ? 'success' : 'error')
+      event.emit()
     } catch (err) {
-      apLogger.debug('failed to send reply to followers', { err })
+      event.setError(err instanceof Error ? err : new Error(String(err)))
+      event.setOutcome('error')
+      event.emit()
     }
-
-    apLogger.info('federated external bluesky reply to ActivityPub', {
-      replyAtUri,
-      parentAtUri,
-      authorHandle,
-      noteId: noteId.href,
-      followerCount: followers.length,
-    })
-
-    await this.ctx.db.createExternalReply({
-      atUri: replyAtUri,
-      parentAtUri,
-      authorDid: replyAuthorDid,
-      apNoteId: noteId.href,
-      createdAt: new Date().toISOString(),
-    })
   }
 }

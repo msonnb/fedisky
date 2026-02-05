@@ -3,7 +3,7 @@ import { Accept, Create, Follow, Note, Undo } from '@fedify/vocab'
 import escapeHtml from 'escape-html'
 import { AppContext } from '../context'
 import { postConverter } from '../conversion'
-import { apLogger } from '../logger'
+import { getWideEvent } from '../logging'
 
 /**
  * Validate URL scheme (reject javascript:, data:, etc.)
@@ -29,39 +29,37 @@ export function setupInboxListeners(ctx: AppContext) {
       return { identifier: bridgeDid }
     })
     .on(Follow, async (fedCtx, follow) => {
+      const event = getWideEvent()
+      event?.set('activity.type', 'Follow')
+      event?.set('activity.id', follow.id?.href)
+
       try {
         if (
           follow.id === null ||
           follow.actorId === null ||
           follow.objectId === null
         ) {
-          apLogger.debug(
-            'ignoring follow: missing required fields {followId}',
-            {
-              followId: follow.id?.href,
-            },
-          )
+          event?.set('activity.ignored_reason', 'missing_required_fields')
           return
         }
+
+        event?.set('activity.actor_id', follow.actorId.href)
+
         const parsed = fedCtx.parseUri(follow.objectId)
         if (parsed?.type !== 'actor') {
-          apLogger.debug('ignoring follow: object is not an actor {objectId}', {
-            objectId: follow.objectId.href,
-          })
+          event?.set('activity.ignored_reason', 'object_not_actor')
           return
         }
+
+        event?.set('user.did', parsed.identifier)
 
         const follower = await follow.getActor()
-
         if (follower === null) {
-          apLogger.warn(
-            'ignoring follow: could not fetch follower actor {actorId}',
-            {
-              actorId: follow.actorId.href,
-            },
-          )
+          event?.set('activity.ignored_reason', 'could_not_fetch_actor')
           return
         }
+
+        event?.set('activity.follower_uri', (follower.id as URL).href)
 
         await ctx.db.createFollow({
           userDid: parsed.identifier,
@@ -76,122 +74,104 @@ export function setupInboxListeners(ctx: AppContext) {
           follower,
           new Accept({ actor: follow.objectId, object: follow }),
         )
-        apLogger.info('accepted follow request: {identifier} {followerUri}', {
-          identifier: parsed.identifier,
-          followerUri: (follower.id as URL).href,
-        })
+        event?.set('activity.accepted', true)
       } catch (err) {
-        apLogger.warn(
-          'failed to process follow activity: {followId} {actorId} {err}',
-          { err, followId: follow.id?.href, actorId: follow.actorId?.href },
-        )
+        event?.setError(err instanceof Error ? err : new Error(String(err)))
       }
     })
     .on(Undo, async (fedCtx, undo) => {
+      const event = getWideEvent()
+      event?.set('activity.type', 'Undo')
+      event?.set('activity.id', undo.id?.href)
+
       try {
         const object = await undo.getObject()
         if (!(object instanceof Follow)) {
-          apLogger.debug('ignoring undo: not a follow {undoId}', {
-            undoId: undo.id?.href,
-          })
+          event?.set('activity.ignored_reason', 'not_a_follow')
           return
         }
+
+        event?.set('activity.inner_type', 'Follow')
+
         if (undo.actorId == null || object.objectId == null) {
-          apLogger.debug('ignoring undo: missing actor or object id {undoId}', {
-            undoId: undo.id?.href,
-          })
+          event?.set('activity.ignored_reason', 'missing_actor_or_object')
           return
         }
+
+        event?.set('activity.actor_id', undo.actorId.href)
+
         const parsed = fedCtx.parseUri(object.objectId)
         if (parsed == null || parsed.type !== 'actor') {
-          apLogger.debug('ignoring undo: object is not an actor {objectId}', {
-            objectId: object.objectId.href,
-          })
+          event?.set('activity.ignored_reason', 'object_not_actor')
           return
         }
+
+        event?.set('user.did', parsed.identifier)
+
         await ctx.db.deleteFollow(parsed.identifier, (undo.actorId as URL).href)
-        apLogger.info('processed unfollow: {identifier} {actorUri}', {
-          identifier: parsed.identifier,
-          actorUri: (undo.actorId as URL).href,
-        })
+        event?.set('activity.unfollow_processed', true)
       } catch (err) {
-        apLogger.warn(
-          'failed to process undo activity: {undoId} {actorId} {err}',
-          {
-            err,
-            undoId: undo.id?.href,
-            actorId: undo.actorId?.href,
-          },
-        )
+        event?.setError(err instanceof Error ? err : new Error(String(err)))
       }
     })
     .on(Create, async (fedCtx, create) => {
+      const event = getWideEvent()
+      event?.set('activity.type', 'Create')
+      event?.set('activity.id', create.id?.href)
+
       try {
         if (!ctx.mastodonBridgeAccount.isAvailable()) {
-          apLogger.warn(
-            'skipping incoming create: mastodon bridge account not configured {createId}',
-            {
-              createId: create.id?.href,
-            },
-          )
+          event?.set('activity.ignored_reason', 'bridge_not_configured')
           return
         }
 
         const object = await create.getObject()
         if (!(object instanceof Note)) {
-          apLogger.debug('ignoring create: object is not a Note {createId}', {
-            createId: create.id?.href,
-          })
+          event?.set('activity.ignored_reason', 'not_a_note')
           return
         }
+
+        event?.set('activity.object_type', 'Note')
+        event?.set('activity.note_id', object.id?.href)
 
         const replyTargetId = object.replyTargetId
         if (!replyTargetId) {
-          apLogger.debug('ignoring create: not a reply {noteId}', {
-            noteId: object.id?.href,
-          })
+          event?.set('activity.ignored_reason', 'not_a_reply')
           return
         }
 
+        event?.set('activity.reply_target', replyTargetId.href)
+
         const parsed = fedCtx.parseUri(replyTargetId)
         if (!parsed || parsed.type !== 'object') {
-          apLogger.debug(
-            'ignoring create: reply target is not a local object {replyTargetId}',
-            {
-              replyTargetId: replyTargetId.href,
-            },
-          )
+          event?.set('activity.ignored_reason', 'reply_target_not_local')
           return
         }
 
         // Extract the identifier (DID) from the reply target
-        // The reply target URL should be like /posts/at://did:plc:xxx/app.bsky.feed.post/rkey
         const urlPath = replyTargetId.pathname
         const postUri = urlPath.slice(
           urlPath.indexOf('posts/') + 'posts/'.length,
         )
         const postAtUri = new AtUri(postUri)
         const postAuthorDid = postAtUri.host
+        event?.set('user.did', postAuthorDid)
+
         const account = await ctx.pdsClient.getAccount(postAuthorDid)
         if (!account) {
-          apLogger.debug(
-            'ignoring create: reply target user not found {postAuthorDid}',
-            {
-              postAuthorDid,
-            },
-          )
+          event?.set('activity.ignored_reason', 'user_not_found')
           return
         }
 
         const actor = await create.getActor()
         if (!actor) {
-          apLogger.warn('ignoring create: could not fetch actor {createId}', {
-            createId: create.id?.href,
-          })
+          event?.set('activity.ignored_reason', 'could_not_fetch_actor')
           return
         }
 
         const actorId = actor.id
+        event?.set('activity.actor_id', actorId?.href)
+
         const actorUsername = actor.preferredUsername?.toString() ?? 'unknown'
         let actorHandle = actorUsername
         let actorProfileUrl: string | undefined
@@ -199,6 +179,8 @@ export function setupInboxListeners(ctx: AppContext) {
           actorHandle = `@${actorUsername}@${actorId.hostname}`
           actorProfileUrl = `${actorId.origin}/@${actorUsername}`
         }
+
+        event?.set('activity.actor_handle', actorHandle)
 
         // Build attribution prefix as HTML with a link to the author's profile
         const originalContent = object.content ?? ''
@@ -227,9 +209,7 @@ export function setupInboxListeners(ctx: AppContext) {
         )
 
         if (!convertedRecord) {
-          apLogger.warn('failed to convert Note to record {noteId}', {
-            noteId: object.id?.href,
-          })
+          event?.set('activity.ignored_reason', 'conversion_failed')
           return
         }
 
@@ -242,9 +222,7 @@ export function setupInboxListeners(ctx: AppContext) {
         )
 
         if (!parentRecord) {
-          apLogger.warn('could not find parent post for reply {postAtUri}', {
-            postAtUri: postAtUri.toString(),
-          })
+          event?.set('activity.ignored_reason', 'parent_not_found')
           return
         }
 
@@ -268,6 +246,8 @@ export function setupInboxListeners(ctx: AppContext) {
           postRecord,
         )
 
+        event?.set('activity.created_post_uri', result.uri)
+
         const actorInboxId = actor.inboxId
         if (object.id && actorId && actorInboxId) {
           await ctx.db.createPostMapping({
@@ -277,31 +257,12 @@ export function setupInboxListeners(ctx: AppContext) {
             apActorInbox: actorInboxId.href,
             createdAt: new Date().toISOString(),
           })
-          apLogger.debug(
-            'stored post mapping for bridge post: {atUri} {apNoteId} {apActorId}',
-            {
-              atUri: result.uri,
-              apNoteId: object.id.href,
-              apActorId: actorId.href,
-            },
-          )
+          event?.set('activity.post_mapping_created', true)
         }
 
-        apLogger.info(
-          'created reply post from ActivityPub via mastodon bridge account: {bridgeAccountDid} {postAuthorDid} {actorHandle} {noteId} {postUri}',
-          {
-            bridgeAccountDid: ctx.mastodonBridgeAccount.did,
-            postAuthorDid,
-            actorHandle,
-            noteId: object.id?.href,
-            postUri: result.uri,
-          },
-        )
+        event?.set('activity.bridge_post_created', true)
       } catch (err) {
-        apLogger.warn('failed to process create activity: {createId} {err}', {
-          err,
-          createId: create.id?.href,
-        })
+        event?.setError(err instanceof Error ? err : new Error(String(err)))
       }
     })
 }

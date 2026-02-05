@@ -1,4 +1,4 @@
-import { apLogger } from '../logger'
+import { logger } from '../logger'
 
 export interface BacklinkRecord {
   uri: string
@@ -65,7 +65,7 @@ export class ConstellationClient {
 
       if (!res.ok) {
         const text = await res.text()
-        apLogger.warn('constellation API error', {
+        logger.warn('constellation API error', {
           status: res.status,
           body: text,
           url,
@@ -87,7 +87,7 @@ export class ConstellationClient {
         cursor: data.cursor,
       }
     } catch (err) {
-      apLogger.warn('failed to fetch backlinks', { err, subject, source })
+      logger.warn('failed to fetch backlinks', { err, subject, source })
       throw err
     }
   }

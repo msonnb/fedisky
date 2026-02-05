@@ -1,12 +1,17 @@
 import { AtUri } from '@atproto/syntax'
 import { AppContext } from '../context'
-import { apLogger } from '../logger'
+import { getWideEvent } from '../logging'
 
 export function setupFollowingDispatcher(ctx: AppContext) {
   ctx.federation
     .setFollowingDispatcher(
       '/users/{+identifier}/following',
       async (fedCtx, identifier, cursor) => {
+        const event = getWideEvent()
+        event?.set('dispatch.type', 'following')
+        event?.set('actor.identifier', identifier)
+        event?.set('following.cursor', cursor)
+
         try {
           const limit = 50
           const { records: followRecords } = await ctx.pdsClient.listRecords(
@@ -40,32 +45,26 @@ export function setupFollowingDispatcher(ctx: AppContext) {
               fedCtx.getActorUri((record.value as { subject: string }).subject),
             )
 
-          apLogger.debug(
-            'dispatching following: {identifier} {followingCount} items, cursor={cursor}',
-            {
-              identifier,
-              followingCount: items.length,
-              cursor,
-            },
-          )
+          event?.set('following.count', items.length)
+          event?.set('following.next_cursor', nextCursor)
+          event?.set('dispatch.result', 'success')
+
           return {
             items,
             nextCursor,
           }
         } catch (err) {
-          apLogger.warn(
-            'failed to dispatch following: {identifier} {cursor} {err}',
-            {
-              err,
-              identifier,
-              cursor,
-            },
-          )
+          event?.setError(err instanceof Error ? err : new Error(String(err)))
+          event?.set('dispatch.result', 'error')
           return { items: [], nextCursor: null }
         }
       },
     )
     .setCounter(async (fedCtx, identifier) => {
+      const event = getWideEvent()
+      event?.set('dispatch.type', 'following_count')
+      event?.set('actor.identifier', identifier)
+
       try {
         const { records: allFollowRecords } = await ctx.pdsClient.listRecords(
           identifier,
@@ -82,12 +81,12 @@ export function setupFollowingDispatcher(ctx: AppContext) {
 
         const localAccounts = await ctx.pdsClient.getAccounts(followedDids)
 
+        event?.set('following.total_count', localAccounts.size)
+        event?.set('dispatch.result', 'success')
         return localAccounts.size
       } catch (err) {
-        apLogger.warn('failed to count following: {identifier} {err}', {
-          err,
-          identifier,
-        })
+        event?.setError(err instanceof Error ? err : new Error(String(err)))
+        event?.set('dispatch.result', 'error')
         return 0
       }
     })

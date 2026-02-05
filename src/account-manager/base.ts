@@ -2,7 +2,7 @@ import crypto from 'node:crypto'
 import { AtpAgent, BlobRef } from '@atproto/api'
 import { APFederationConfig } from '../config'
 import { APDatabase } from '../db'
-import { apLogger } from '../logger'
+import { logger } from '../logger'
 import { PDSClient } from '../pds-client'
 import { AccountDatabaseOps, BridgeAccountConfig } from './types'
 
@@ -46,17 +46,14 @@ export abstract class BaseAccountManager {
       const existing = await dbOps.get()
 
       if (existing) {
-        apLogger.info(
-          `found existing ${this.accountName} account in database`,
-          {
-            did: existing.did,
-            handle: existing.handle,
-          },
-        )
+        logger.info(`found existing ${this.accountName} account in database`, {
+          did: existing.did,
+          handle: existing.handle,
+        })
 
         const account = await this.pdsClient.getAccount(existing.did)
         if (!account) {
-          apLogger.warn(
+          logger.warn(
             `${this.accountName} account no longer exists on PDS, will recreate`,
             { did: existing.did },
           )
@@ -67,13 +64,13 @@ export abstract class BaseAccountManager {
             this._did = existing.did
             this._handle = existing.handle
             this._available = true
-            apLogger.info(
+            logger.info(
               `${this.accountName} account session refreshed successfully`,
               { did: this._did, handle: this._handle },
             )
             return
           } catch (refreshErr) {
-            apLogger.warn(
+            logger.warn(
               `failed to refresh ${this.accountName} account session, will try to login`,
               { err: refreshErr },
             )
@@ -91,7 +88,7 @@ export abstract class BaseAccountManager {
               await dbOps.updateTokens(session.accessJwt, session.refreshJwt)
 
               this._available = true
-              apLogger.info(
+              logger.info(
                 `${this.accountName} account logged in successfully`,
                 {
                   did: this._did,
@@ -100,7 +97,7 @@ export abstract class BaseAccountManager {
               )
               return
             } catch (loginErr) {
-              apLogger.warn(
+              logger.warn(
                 `failed to login to ${this.accountName} account, will recreate`,
                 { err: loginErr },
               )
@@ -112,7 +109,7 @@ export abstract class BaseAccountManager {
 
       await this.createAccount()
     } catch (err) {
-      apLogger.error(
+      logger.error(
         `failed to initialize ${this.accountName} account - ${this.disabledFeatureMsg}`,
         { err },
       )
@@ -124,16 +121,16 @@ export abstract class BaseAccountManager {
     const dbOps = this.getDbOps()
     const { handle, email, displayName, description } = this.getAccountConfig()
 
-    apLogger.info(`creating new ${this.accountName} account`, { handle, email })
+    logger.info(`creating new ${this.accountName} account`, { handle, email })
 
     const password = crypto.randomBytes(32).toString('hex')
 
     let inviteCode: string | undefined
     try {
       inviteCode = await this.pdsClient.createInviteCode(1)
-      apLogger.debug(`created invite code for ${this.accountName} account`)
+      logger.debug(`created invite code for ${this.accountName} account`)
     } catch (err) {
-      apLogger.debug('could not create invite code (invites may be disabled)', {
+      logger.debug('could not create invite code (invites may be disabled)', {
         err,
       })
     }
@@ -161,7 +158,7 @@ export abstract class BaseAccountManager {
         updatedAt: new Date().toISOString(),
       })
 
-      apLogger.info(`${this.accountName} account created successfully`, {
+      logger.info(`${this.accountName} account created successfully`, {
         did: this._did,
         handle: this._handle,
       })
@@ -170,7 +167,7 @@ export abstract class BaseAccountManager {
 
       this._available = true
     } catch (err) {
-      apLogger.error(`failed to create ${this.accountName} account`, {
+      logger.error(`failed to create ${this.accountName} account`, {
         err,
         handle,
         email,
@@ -184,7 +181,7 @@ export abstract class BaseAccountManager {
     description: string,
   ): Promise<void> {
     if (!this._accessJwt || !this._did) {
-      apLogger.warn('cannot setup profile: no access token or DID')
+      logger.warn('cannot setup profile: no access token or DID')
       return
     }
 
@@ -217,11 +214,11 @@ export abstract class BaseAccountManager {
         record: profileRecord,
       })
 
-      apLogger.info(`${this.accountName} account profile set up`, {
+      logger.info(`${this.accountName} account profile set up`, {
         did: this._did,
       })
     } catch (err) {
-      apLogger.warn(`failed to set up ${this.accountName} account profile`, {
+      logger.warn(`failed to set up ${this.accountName} account profile`, {
         err,
       })
     }

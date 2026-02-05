@@ -1,4 +1,4 @@
-import { apLogger } from '../logger'
+import { logger } from '../logger'
 
 export interface RecordResult {
   uri: string
@@ -51,7 +51,7 @@ export class AppViewClient {
         }
       }
       if (!res.ok) {
-        apLogger.warn('failed to get record from appview', {
+        logger.warn('failed to get record from appview', {
           status: res.status,
           did,
           collection,
@@ -70,7 +70,7 @@ export class AppViewClient {
         value: data.value,
       }
     } catch (err: unknown) {
-      apLogger.warn('failed to get record from appview', {
+      logger.warn('failed to get record from appview', {
         err,
         did,
         collection,
@@ -98,7 +98,7 @@ export class AppViewClient {
         return null
       }
       if (!res.ok) {
-        apLogger.warn('failed to resolve handle from appview', {
+        logger.warn('failed to resolve handle from appview', {
           status: res.status,
           handle,
         })
@@ -107,7 +107,7 @@ export class AppViewClient {
       const data = (await res.json()) as { did: string }
       return data.did
     } catch (err: unknown) {
-      apLogger.warn('failed to resolve handle from appview', { err, handle })
+      logger.warn('failed to resolve handle from appview', { err, handle })
       return null
     }
   }

@@ -2,7 +2,6 @@ import type { Main as Repost } from '@atproto/api/dist/client/types/app/bsky/fee
 import { AtUri } from '@atproto/syntax'
 import { Announce, Note, PUBLIC_COLLECTION } from '@fedify/vocab'
 import { Temporal } from '@js-temporal/polyfill'
-import { apLogger } from '../logger'
 import { RecordConverter } from './registry'
 import { isLocalUser } from './util/is-local-user'
 
@@ -19,14 +18,6 @@ export const repostConverter: RecordConverter<Repost, Note> = {
     // We only generate Announce activities for reposts of local posts
     const isLocalPost = await isLocalUser(pdsClient, subjectDid)
     if (!isLocalPost) {
-      apLogger.debug(
-        'skipping repost of external post (not on this PDS): {repostUri} {subjectUri} {subjectDid}',
-        {
-          repostUri: record.uri,
-          subjectUri,
-          subjectDid,
-        },
-      )
       return null
     }
 
@@ -48,15 +39,6 @@ export const repostConverter: RecordConverter<Repost, Note> = {
       object: subjectNoteId,
       published,
     })
-
-    apLogger.debug(
-      'converted repost to Announce activity: {repostUri} {subjectUri} {announceId}',
-      {
-        repostUri: record.uri,
-        subjectUri,
-        announceId: announceId.href,
-      },
-    )
 
     return {
       object: null,

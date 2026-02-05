@@ -14,7 +14,8 @@ import { WebSocket } from 'ws'
 import { AppContext } from '../context'
 import type { RecordConverter } from '../conversion'
 import { recordConverterRegistry } from '../federation'
-import { apLogger } from '../logger'
+import { logger } from '../logger'
+import { createWideEvent } from '../logging'
 
 // Frame types per AT Protocol Event Stream spec
 const FrameType = {
@@ -52,12 +53,12 @@ export class FirehoseProcessor {
 
     this.running = true
     this.abortController = new AbortController()
-    apLogger.info('starting firehose processor')
+    logger.info('firehose processor starting')
 
     try {
       await this.connect()
     } catch (err) {
-      apLogger.error('firehose processor crashed: {err}', { err })
+      logger.error('firehose processor crashed: {err}', { err })
       this.running = false
       throw err
     }
@@ -74,34 +75,34 @@ export class FirehoseProcessor {
     }
 
     const fullUrl = params.toString() ? `${wsUrl}?${params}` : wsUrl
-    apLogger.info('connecting to firehose: {url}', { url: fullUrl })
+    logger.info('connecting to firehose: {url}', { url: fullUrl })
 
     const ws = new WebSocket(fullUrl)
 
     ws.on('open', () => {
-      apLogger.info('connected to firehose')
+      logger.info('connected to firehose')
     })
 
     ws.on('message', async (data: Buffer) => {
       try {
         await this.processMessage(data)
       } catch (err) {
-        apLogger.warn('failed to process firehose message: {err}', { err })
+        logger.warn('failed to process firehose message: {err}', { err })
       }
     })
 
     ws.on('error', (err) => {
-      apLogger.error('firehose websocket error: {err}', { err })
+      logger.error('firehose websocket error: {err}', { err })
     })
 
     ws.on('close', () => {
-      apLogger.info('firehose connection closed')
+      logger.info('firehose connection closed')
       if (this.running) {
         // Reconnect after a delay
         setTimeout(() => {
           if (this.running) {
             this.connect().catch((err) => {
-              apLogger.error('failed to reconnect to firehose: {err}', { err })
+              logger.error('failed to reconnect to firehose: {err}', { err })
             })
           }
         }, 5000)
@@ -123,7 +124,6 @@ export class FirehoseProcessor {
     try {
       const decoded = cborDecodeMulti(data)
       if (decoded.length < 2) {
-        apLogger.debug('frame missing header or body')
         return
       }
 
@@ -132,7 +132,7 @@ export class FirehoseProcessor {
       // Only process message frames (op=1), skip error frames (op=-1)
       if (header.op !== FrameType.Message) {
         if (header.op === FrameType.Error) {
-          apLogger.warn('received error frame from firehose: {error}', {
+          logger.warn('received error frame from firehose: {error}', {
             error: body,
           })
         }
@@ -145,7 +145,7 @@ export class FirehoseProcessor {
         return
       }
 
-      const event: CommitEvent = {
+      const commitEvent: CommitEvent = {
         repo: (body.repo as string) ?? '',
         ops:
           (
@@ -158,24 +158,20 @@ export class FirehoseProcessor {
         seq: (body.seq as number) ?? 0,
       }
 
-      await this.processCommit(event)
-    } catch (err) {
-      // Log but don't throw - we want to continue processing
-      apLogger.debug('failed to decode firehose message: {err}', { err })
+      await this.processCommit(commitEvent)
+    } catch {
+      // Silently continue - decode errors are expected for non-commit messages
     }
   }
 
-  private async processCommit(event: CommitEvent) {
-    const did = event.repo
+  private async processCommit(commitEvent: CommitEvent) {
+    const did = commitEvent.repo
 
     // Skip events from bridge accounts - they should not federate to ActivityPub
     if (
       this.ctx.mastodonBridgeAccount.isAvailable() &&
       did === this.ctx.mastodonBridgeAccount.did
     ) {
-      apLogger.debug('skipping commit from mastodon bridge account: {did}', {
-        did,
-      })
       return
     }
 
@@ -183,20 +179,13 @@ export class FirehoseProcessor {
       this.ctx.blueskyBridgeAccount.isAvailable() &&
       did === this.ctx.blueskyBridgeAccount.did
     ) {
-      apLogger.debug('skipping commit from bluesky bridge account: {did}', {
-        did,
-      })
       return
     }
 
-    for (const op of event.ops) {
+    for (const op of commitEvent.ops) {
       const collection = op.path.split('/')[0]
       const recordConverter = recordConverterRegistry.get(collection)
       if (!recordConverter) {
-        apLogger.debug(
-          'no converter registered for collection, skipping: {collection} {path}',
-          { collection, path: op.path },
-        )
         continue
       }
 
@@ -213,9 +202,10 @@ export class FirehoseProcessor {
           uri,
           collection,
           recordConverter,
+          commitEvent.seq,
         )
       } else if (op.action === 'delete') {
-        await this.processDelete(fedifyContext, did, uri)
+        await this.processDelete(fedifyContext, did, uri, commitEvent.seq)
       }
     }
   }
@@ -226,8 +216,16 @@ export class FirehoseProcessor {
     uri: string,
     collection: string,
     recordConverter: RecordConverter | undefined,
+    seq: number,
   ) {
     if (!recordConverter) return
+
+    const event = createWideEvent('firehose_create')
+      .set('firehose.seq', seq)
+      .set('firehose.action', 'create')
+      .set('user.did', did)
+      .set('record.uri', uri)
+      .set('record.collection', collection)
 
     try {
       const record = await this.ctx.pdsClient.getRecord(
@@ -237,10 +235,8 @@ export class FirehoseProcessor {
       )
 
       if (!record) {
-        apLogger.debug('skipping event: record not found {did} {uri}', {
-          did,
-          uri,
-        })
+        event.setOutcome('ignored').set('ignored_reason', 'record_not_found')
+        event.emit()
         return
       }
 
@@ -253,14 +249,14 @@ export class FirehoseProcessor {
       )
 
       if (!conversionResult?.activity) {
-        apLogger.debug(
-          'skipping event: conversion returned null or no activity {did} {uri}',
-          { did, uri },
-        )
+        event.setOutcome('ignored').set('ignored_reason', 'conversion_null')
+        event.emit()
         return
       }
 
       const activity = conversionResult.activity
+      event.set('activity.type', activity.constructor.name)
+      event.set('activity.id', activity.id?.href)
 
       // Check if this is a reply to a bridge post - if so, also send to the original author
       const recordValue = record.value as {
@@ -273,26 +269,23 @@ export class FirehoseProcessor {
         )
         if (mapping) {
           originalAuthorInbox = mapping.apActorInbox
+          event.set('activity.is_bridge_reply', true)
         }
       }
 
+      let sentToFollowers = false
       try {
         await fedifyContext.sendActivity(
           { identifier: did },
           'followers',
           activity,
         )
-        apLogger.info('sent activity to followers: {did} {uri} {activityId}', {
-          did,
-          uri,
-          activityId: activity.id?.href,
-        })
+        sentToFollowers = true
       } catch (sendErr) {
-        apLogger.warn(
-          'failed to send activity to followers: {did} {uri} {activityId} {err}',
-          { did, uri, activityId: activity.id?.href, err: sendErr },
-        )
+        event.set('send.followers_error', String(sendErr))
       }
+
+      event.set('send.sent_to_followers', sentToFollowers)
 
       // Add posts to monitored list for external reply discovery via Constellation
       if (collection === 'app.bsky.feed.post') {
@@ -303,11 +296,9 @@ export class FirehoseProcessor {
             lastChecked: null,
             createdAt: new Date().toISOString(),
           })
-        } catch (monitorErr) {
-          apLogger.debug('failed to add post to monitoring: {uri} {err}', {
-            uri,
-            err: monitorErr,
-          })
+          event.set('monitoring.added', true)
+        } catch {
+          // Ignore monitoring errors
         }
       }
 
@@ -326,38 +317,19 @@ export class FirehoseProcessor {
               },
               activity,
             )
-            apLogger.info(
-              'sent reply activity to original AP author: {did} {uri} {activityId} {originalAuthorInbox}',
-              {
-                did,
-                uri,
-                activityId: activity.id?.href,
-                originalAuthorInbox,
-              },
-            )
+            event.set('send.sent_to_original_author', true)
           } catch (sendErr) {
-            apLogger.warn(
-              'failed to send reply activity to original AP author: {did} {uri} {activityId} {originalAuthorInbox} {err}',
-              {
-                did,
-                uri,
-                activityId: activity.id?.href,
-                originalAuthorInbox,
-                err: sendErr,
-              },
-            )
+            event.set('send.original_author_error', String(sendErr))
           }
         }
       }
+
+      event.setOutcome(sentToFollowers ? 'success' : 'error')
+      event.emit()
     } catch (err) {
-      apLogger.warn(
-        'failed to process commit for AP delivery: {did} {uri} {err}',
-        {
-          did,
-          uri,
-          err,
-        },
-      )
+      event.setError(err instanceof Error ? err : new Error(String(err)))
+      event.setOutcome('error')
+      event.emit()
     }
   }
 
@@ -365,32 +337,39 @@ export class FirehoseProcessor {
     fedifyContext: Context<void>,
     did: string,
     uri: string,
+    seq: number,
   ) {
+    const event = createWideEvent('firehose_delete')
+      .set('firehose.seq', seq)
+      .set('firehose.action', 'delete')
+      .set('user.did', did)
+      .set('record.uri', uri)
+
     try {
       const activity = this.buildDeleteActivity(fedifyContext, did, uri)
 
       if (!activity) {
-        apLogger.debug('skipping event: no activity to send {did} {uri}', {
-          did,
-          uri,
-        })
+        event.setOutcome('ignored').set('ignored_reason', 'no_activity')
+        event.emit()
         return
       }
+
+      event.set('activity.type', activity.constructor.name)
+      event.set('activity.id', activity.id?.href)
 
       await this.sendActivityToFollowers({
         fedifyContext,
         did,
         activity,
+        event,
       })
+
+      event.setOutcome('success')
+      event.emit()
     } catch (err) {
-      apLogger.warn(
-        'failed to process delete for AP delivery: {did} {uri} {err}',
-        {
-          did,
-          uri,
-          err,
-        },
-      )
+      event.setError(err instanceof Error ? err : new Error(String(err)))
+      event.setOutcome('error')
+      event.emit()
     }
   }
 
@@ -449,9 +428,9 @@ export class FirehoseProcessor {
     fedifyContext: Context<void>
     did: string
     activity: Activity
+    event?: ReturnType<typeof createWideEvent>
   }) {
-    const { fedifyContext, did, activity } = opts
-    const activityType = activity.constructor.name
+    const { fedifyContext, did, activity, event } = opts
 
     try {
       await fedifyContext.sendActivity(
@@ -459,31 +438,14 @@ export class FirehoseProcessor {
         'followers',
         activity,
       )
-      apLogger.info(
-        'sent activity to followers: {did} {activityId} {activityType} {objectId}',
-        {
-          did,
-          activityId: activity.id?.href,
-          activityType,
-          objectId: activity.objectId?.href,
-        },
-      )
+      event?.set('send.sent_to_followers', true)
     } catch (sendErr) {
-      apLogger.warn(
-        'failed to send activity to followers: {did} {activityId} {activityType} {objectId} {err}',
-        {
-          did,
-          activityId: activity.id?.href,
-          err: sendErr,
-          activityType,
-          objectId: activity.objectId?.href,
-        },
-      )
+      event?.set('send.followers_error', String(sendErr))
     }
   }
 
   async stop() {
-    apLogger.info('stopping firehose processor')
+    logger.info('firehose processor stopping')
     this.running = false
     this.abortController?.abort()
     this.abortController = null

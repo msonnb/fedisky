@@ -1,12 +1,17 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { AppContext } from '../context'
-import { apLogger } from '../logger'
+import { getWideEvent } from '../logging'
 
 export function setupFollowersDispatcher(ctx: AppContext) {
   ctx.federation
     .setFollowersDispatcher(
       '/users/{+identifier}/followers',
       async (fedCtx, identifier, cursor) => {
+        const event = getWideEvent()
+        event?.set('dispatch.type', 'followers')
+        event?.set('actor.identifier', identifier)
+        event?.set('followers.cursor', cursor)
+
         try {
           const { follows, nextCursor } = await ctx.db.getFollows({
             userDid: identifier,
@@ -14,14 +19,10 @@ export function setupFollowersDispatcher(ctx: AppContext) {
             limit: 50,
           })
 
-          apLogger.debug(
-            'dispatching followers: {identifier} {followersCount} items, cursor={cursor}',
-            {
-              identifier,
-              followersCount: follows.length,
-              cursor,
-            },
-          )
+          event?.set('followers.count', follows.length)
+          event?.set('followers.next_cursor', nextCursor)
+          event?.set('dispatch.result', 'success')
+
           return {
             items: follows.map((follow) => ({
               id: new URL(follow.actorUri),
@@ -30,26 +31,25 @@ export function setupFollowersDispatcher(ctx: AppContext) {
             nextCursor,
           }
         } catch (err) {
-          apLogger.warn(
-            'failed to dispatch followers: {identifier} {cursor} {err}',
-            {
-              err,
-              identifier,
-              cursor,
-            },
-          )
+          event?.setError(err instanceof Error ? err : new Error(String(err)))
+          event?.set('dispatch.result', 'error')
           return { items: [], nextCursor: null }
         }
       },
     )
     .setCounter(async (fedCtx, identifier) => {
+      const event = getWideEvent()
+      event?.set('dispatch.type', 'followers_count')
+      event?.set('actor.identifier', identifier)
+
       try {
-        return await ctx.db.getFollowsCount(identifier)
+        const count = await ctx.db.getFollowsCount(identifier)
+        event?.set('followers.total_count', count)
+        event?.set('dispatch.result', 'success')
+        return count
       } catch (err) {
-        apLogger.warn('failed to count followers: {identifier} {err}', {
-          err,
-          identifier,
-        })
+        event?.setError(err instanceof Error ? err : new Error(String(err)))
+        event?.set('dispatch.result', 'error')
         return 0
       }
     })

@@ -13,6 +13,7 @@ import { AppContext } from './context'
 import { createRouter } from './federation'
 import { FirehoseProcessor } from './firehose'
 import { logger } from './logger'
+import { wideEventMiddleware } from './logging'
 
 export * from './config'
 export { AppContext } from './context'
@@ -90,22 +91,8 @@ export class APFederationService {
     app.use('/inbox', inboxLimiter)
     app.use('/users/*/inbox', inboxLimiter)
 
-    app.use((req, res, next) => {
-      const start = Date.now()
-      res.on('finish', () => {
-        const duration = Date.now() - start
-        logger.debug(
-          'request completed: {method} {url} {status} {duration}ms',
-          {
-            method: req.method,
-            url: req.url,
-            status: res.statusCode,
-            duration,
-          },
-        )
-      })
-      next()
-    })
+    // Wide event middleware - creates one canonical log line per HTTP request
+    app.use(wideEventMiddleware())
 
     app.get('/health', (_req, res) => {
       res.json({ status: 'ok' })

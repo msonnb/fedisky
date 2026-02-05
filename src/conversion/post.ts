@@ -30,7 +30,7 @@ import {
 } from '@fedify/vocab'
 import { Temporal } from '@js-temporal/polyfill'
 import escapeHtml from 'escape-html'
-import { apLogger } from '../logger'
+import { getWideEvent } from '../logging'
 import { PDSClient } from '../pds-client'
 import { RecordConverter } from './registry'
 import {
@@ -193,12 +193,14 @@ export const postConverter: RecordConverter<Post, Note> = {
   },
 
   async toRecord(ctx, identifier, object, options) {
+    const event = getWideEvent()
+    event?.set('conversion.type', 'note_to_record')
+    event?.set('conversion.note_id', object.id?.href)
+
     try {
       const content = object.content
       if (!content) {
-        apLogger.debug('note has no content: {noteId}', {
-          noteId: object.id?.href,
-        })
+        event?.set('conversion.result', 'no_content')
         return null
       }
 
@@ -287,11 +289,8 @@ export const postConverter: RecordConverter<Post, Note> = {
       const rkey = TID.next().toString()
       const uri = `at://${identifier}/app.bsky.feed.post/${rkey}`
 
-      apLogger.debug('converted AP note to post record: {uri} {cid} {noteId}', {
-        uri,
-        cid: cid.toString(),
-        noteId: object.id?.href,
-      })
+      event?.set('conversion.result', 'success')
+      event?.set('conversion.record_uri', uri)
 
       return {
         uri,
@@ -299,10 +298,8 @@ export const postConverter: RecordConverter<Post, Note> = {
         value: record,
       }
     } catch (err) {
-      apLogger.error('failed to convert AP note to record: {noteId} {err}', {
-        err,
-        noteId: object.id?.href,
-      })
+      event?.setError(err instanceof Error ? err : new Error(String(err)))
+      event?.set('conversion.result', 'error')
       return null
     }
   },
@@ -381,7 +378,7 @@ function buildEmbedFromBlobs(
  * AP URLs are in the format: https://hostname/posts/at://did:plc:xxx/app.bsky.feed.post/rkey
  */
 async function parseReplyTarget(
-  ctx: unknown,
+  _ctx: unknown,
   replyTargetUrl: URL,
 ): Promise<ReplyRef | null> {
   try {
@@ -391,9 +388,6 @@ async function parseReplyTarget(
     // Format: /posts/at://did:xxx/collection/rkey
     const atUriMatch = urlPath.match(/\/posts\/(at:\/\/[^/]+\/[^/]+\/[^/]+)/)
     if (!atUriMatch) {
-      apLogger.debug('could not parse reply target URL: {url}', {
-        url: replyTargetUrl.href,
-      })
       return null
     }
 
@@ -412,11 +406,7 @@ async function parseReplyTarget(
       root: parentRef,
       parent: parentRef,
     }
-  } catch (err) {
-    apLogger.debug('failed to parse reply target: {url} {err}', {
-      err,
-      url: replyTargetUrl.href,
-    })
+  } catch {
     return null
   }
 }

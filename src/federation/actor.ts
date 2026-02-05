@@ -3,17 +3,21 @@ import { ensureValidDid } from '@atproto/syntax'
 import { exportJwk, generateCryptoKeyPair, importJwk } from '@fedify/fedify'
 import { Endpoints, Image, Person } from '@fedify/vocab'
 import { AppContext } from '../context'
-import { apLogger } from '../logger'
+import { getWideEvent } from '../logging'
 
 export function setupActorDispatcher(ctx: AppContext) {
   ctx.federation
     .setActorDispatcher(`/users/{+identifier}`, async (fedCtx, identifier) => {
+      const event = getWideEvent()
+      event?.set('actor.identifier', identifier)
+      event?.set('dispatch.type', 'actor')
+
       try {
         // Validate DID format using ATProto syntax validation
         try {
           ensureValidDid(identifier)
         } catch {
-          apLogger.debug('invalid DID format: {identifier}', { identifier })
+          event?.set('dispatch.result', 'invalid_did')
           return null
         }
 
@@ -22,22 +26,17 @@ export function setupActorDispatcher(ctx: AppContext) {
           ctx.mastodonBridgeAccount.isAvailable() &&
           identifier === ctx.mastodonBridgeAccount.did
         ) {
-          apLogger.debug(
-            'hiding mastodon bridge account from actor dispatcher: {identifier}',
-            {
-              identifier,
-            },
-          )
+          event?.set('dispatch.result', 'hidden_bridge_account')
           return null
         }
 
         const account = await ctx.pdsClient.getAccount(identifier)
         if (!account || !account.handle) {
-          apLogger.debug('actor not found or missing handle: {identifier}', {
-            identifier,
-          })
+          event?.set('dispatch.result', 'not_found')
           return null
         }
+
+        event?.set('actor.handle', account.handle)
 
         const profile = await ctx.pdsClient.getProfile(identifier)
 
@@ -59,10 +58,8 @@ export function setupActorDispatcher(ctx: AppContext) {
           : undefined
 
         const keyPairs = await fedCtx.getActorKeyPairs(identifier)
-        apLogger.debug('dispatching actor: {identifier} {handle}', {
-          identifier,
-          handle: account.handle,
-        })
+        event?.set('dispatch.result', 'success')
+
         return new Person({
           id: fedCtx.getActorUri(identifier),
           alias: new URL(`at://${encodeURIComponent(account.did)}`),
@@ -93,42 +90,33 @@ export function setupActorDispatcher(ctx: AppContext) {
           assertionMethods: keyPairs.map((keyPair) => keyPair.multikey),
         })
       } catch (err) {
-        apLogger.warn('failed to dispatch actor: {identifier} {err}', {
-          err,
-          identifier,
-        })
+        event?.setError(err instanceof Error ? err : new Error(String(err)))
+        event?.set('dispatch.result', 'error')
         return null
       }
     })
     .mapHandle(async (fedCtx, username) => {
+      const event = getWideEvent()
+      event?.set('dispatch.type', 'handle_mapping')
+      event?.set('actor.username', username)
+
       try {
         const hostname = ctx.cfg.service.hostname
         const handle = `${username}.${hostname === 'localhost' ? 'test' : hostname}`
+        event?.set('actor.handle', handle)
 
         // Hide the mastodon bridge account from ActivityPub handle mapping
         if (
           ctx.mastodonBridgeAccount.isAvailable() &&
           username === ctx.cfg.mastodonBridge.handle
         ) {
-          apLogger.debug(
-            'hiding mastodon bridge account from handle mapping: {username} {handle}',
-            {
-              username,
-              handle,
-            },
-          )
+          event?.set('dispatch.result', 'hidden_bridge_account')
           return null
         }
 
         const did = await ctx.pdsClient.resolveHandle(handle)
         if (!did) {
-          apLogger.debug(
-            'handle mapping failed: account not found {username} {handle}',
-            {
-              username,
-              handle,
-            },
-          )
+          event?.set('dispatch.result', 'not_found')
           return null
         }
 
@@ -137,44 +125,31 @@ export function setupActorDispatcher(ctx: AppContext) {
           ctx.mastodonBridgeAccount.isAvailable() &&
           did === ctx.mastodonBridgeAccount.did
         ) {
-          apLogger.debug(
-            'hiding mastodon bridge account from handle mapping (by DID): {username} {handle} {did}',
-            {
-              username,
-              handle,
-              did,
-            },
-          )
+          event?.set('dispatch.result', 'hidden_bridge_account')
           return null
         }
 
-        apLogger.debug('mapped handle to did: {username} {handle} {did}', {
-          username,
-          handle,
-          did,
-        })
+        event?.set('actor.did', did)
+        event?.set('dispatch.result', 'success')
         return did
       } catch (err) {
-        apLogger.warn('failed to map handle: {username} {err}', {
-          err,
-          username,
-        })
+        event?.setError(err instanceof Error ? err : new Error(String(err)))
+        event?.set('dispatch.result', 'error')
         return null
       }
     })
     .setKeyPairsDispatcher(async (fedCtx, identifier) => {
+      const event = getWideEvent()
+      event?.set('dispatch.type', 'keypairs')
+      event?.set('actor.identifier', identifier)
+
       try {
         // Don't generate/return keypairs for the mastodon bridge account
         if (
           ctx.mastodonBridgeAccount.isAvailable() &&
           identifier === ctx.mastodonBridgeAccount.did
         ) {
-          apLogger.debug(
-            'not providing keypairs for mastodon bridge account: {identifier}',
-            {
-              identifier,
-            },
-          )
+          event?.set('dispatch.result', 'hidden_bridge_account')
           return []
         }
 
@@ -185,9 +160,7 @@ export function setupActorDispatcher(ctx: AppContext) {
         let ed25519Keypair = await ctx.db.getKeyPair(identifier, 'Ed25519')
 
         if (!rsaKeypair) {
-          apLogger.info('generating new RSA keypair: {identifier}', {
-            identifier,
-          })
+          event?.set('keypairs.rsa_generated', true)
           const { publicKey, privateKey } =
             await generateCryptoKeyPair('RSASSA-PKCS1-v1_5')
           rsaKeypair = await ctx.db.createKeyPair({
@@ -200,9 +173,7 @@ export function setupActorDispatcher(ctx: AppContext) {
         }
 
         if (!ed25519Keypair) {
-          apLogger.info('generating new Ed25519 keypair: {identifier}', {
-            identifier,
-          })
+          event?.set('keypairs.ed25519_generated', true)
           const { publicKey, privateKey } =
             await generateCryptoKeyPair('Ed25519')
           ed25519Keypair = await ctx.db.createKeyPair({
@@ -229,13 +200,11 @@ export function setupActorDispatcher(ctx: AppContext) {
           }),
         )
 
-        apLogger.debug('dispatched keypairs: {identifier}', { identifier })
+        event?.set('dispatch.result', 'success')
         return pairs
       } catch (err) {
-        apLogger.warn('failed to dispatch keypairs: {identifier} {err}', {
-          err,
-          identifier,
-        })
+        event?.setError(err instanceof Error ? err : new Error(String(err)))
+        event?.set('dispatch.result', 'error')
         return []
       }
     })
