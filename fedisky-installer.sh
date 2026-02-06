@@ -133,18 +133,18 @@ Run it with:
   echo
 
   # Mastodon bridge account configuration
-  AP_MASTODON_BRIDGE_HANDLE="mastodon.${AP_HOSTNAME}"
+  AP_MASTODON_BRIDGE_HANDLE="mastodon.${PDS_HOSTNAME}"
   AP_MASTODON_BRIDGE_DISPLAY_NAME="Mastodon Bridge"
   AP_MASTODON_BRIDGE_DESCRIPTION="This account posts content from Mastodon and other Fediverse servers."
 
   echo "The sidecar creates a 'mastodon bridge account' on your PDS to post incoming"
-  echo "replies from Mastodon users. The default handle is: mastodon.${AP_HOSTNAME}"
+  echo "replies from Mastodon users. The default handle is: mastodon.${PDS_HOSTNAME}"
   echo
   read -p "Use a custom mastodon bridge account handle? (y/N): " CUSTOM_BRIDGE
   if [[ "${CUSTOM_BRIDGE}" =~ ^[Yy] ]]; then
-    read -p "Enter mastodon bridge account handle (e.g. fediverse.${AP_HOSTNAME}): " AP_MASTODON_BRIDGE_HANDLE
+    read -p "Enter mastodon bridge account handle (e.g. fediverse.${PDS_HOSTNAME}): " AP_MASTODON_BRIDGE_HANDLE
     if [[ -z "${AP_MASTODON_BRIDGE_HANDLE}" ]]; then
-      AP_MASTODON_BRIDGE_HANDLE="mastodon.${AP_HOSTNAME}"
+      AP_MASTODON_BRIDGE_HANDLE="mastodon.${PDS_HOSTNAME}"
       echo "  Using default: ${AP_MASTODON_BRIDGE_HANDLE}"
     fi
     read -p "Enter mastodon bridge account display name (default: Mastodon Bridge): " AP_MASTODON_BRIDGE_DISPLAY_NAME
@@ -226,9 +226,6 @@ AP_CONFIG
   if [[ "${AP_HOSTNAME}" != "${PDS_HOSTNAME}" ]]; then
     AP_SITE_BLOCK="
 ${AP_HOSTNAME} {
-	tls {
-		on_demand
-	}
 	import activitypub_routes
 	# Return 404 for non-ActivityPub requests on this hostname
 	handle {
@@ -236,8 +233,30 @@ ${AP_HOSTNAME} {
 	}
 }
 "
+	PDS_SITE_BLOCK="
+${PDS_HOSTNAME}, *.${PDS_HOSTNAME} {
+	tls {
+		on_demand
+	}
+
+	reverse_proxy http://localhost:3000
+}
+"
   else
     AP_SITE_BLOCK=""
+		PDS_SITE_BLOCK="
+${PDS_HOSTNAME}, *.${PDS_HOSTNAME} {
+	tls {
+		on_demand
+	}
+
+	import activitypub_routes
+
+	handle {
+		reverse_proxy http://localhost:3000
+	}
+}
+"
   fi
 
   cat <<CADDYFILE_CONTENT >"${CADDYFILE}"
@@ -272,17 +291,7 @@ ${AP_HOSTNAME} {
 	}
 }
 ${AP_SITE_BLOCK}
-*.${PDS_HOSTNAME}, ${PDS_HOSTNAME} {
-	tls {
-		on_demand
-	}
-	import activitypub_routes
-
-	# Default: proxy to PDS
-	handle {
-		reverse_proxy http://localhost:3000
-	}
-}
+${PDS_SITE_BLOCK}
 CADDYFILE_CONTENT
 
   echo "  Caddyfile updated with ActivityPub routing"
