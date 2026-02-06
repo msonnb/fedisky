@@ -121,36 +121,35 @@ Run it with:
   fi
   echo
 
-  # Ask about firehose subscription
   AP_FIREHOSE_ENABLED="true"
-  echo "The firehose subscription allows the sidecar to automatically"
-  echo "federate new posts to ActivityPub followers in real-time."
+
+  # Mastodon bridge account
+  AP_MASTODON_BRIDGE_HANDLE="mastodon.${PDS_HOSTNAME}"
+  AP_MASTODON_BRIDGE_DISPLAY_NAME="Mastodon Bridge"
+  AP_MASTODON_BRIDGE_DESCRIPTION="This account relays replies from Mastodon users."
+
+  echo "The Mastodon bridge creates an account on your PDS that relays replies"
+  echo "from Mastodon users into Bluesky threads."
   echo
-  read -p "Enable firehose subscription for real-time federation? (Y/n): " ENABLE_FIREHOSE
-  if [[ "${ENABLE_FIREHOSE}" =~ ^[Nn] ]]; then
-    AP_FIREHOSE_ENABLED="false"
+  AP_MASTODON_BRIDGE_ENABLED="true"
+  read -p "Enable the Mastodon bridge account? (Y/n): " ENABLE_MASTODON_BRIDGE
+  if [[ "${ENABLE_MASTODON_BRIDGE}" =~ ^[Nn] ]]; then
+    AP_MASTODON_BRIDGE_ENABLED="false"
   fi
   echo
 
-  # Mastodon bridge account configuration
-  AP_MASTODON_BRIDGE_HANDLE="mastodon.${PDS_HOSTNAME}"
-  AP_MASTODON_BRIDGE_DISPLAY_NAME="Mastodon Bridge"
-  AP_MASTODON_BRIDGE_DESCRIPTION="This account posts content from Mastodon and other Fediverse servers."
+  # Bluesky bridge account
+  AP_BLUESKY_BRIDGE_HANDLE="bluesky.${PDS_HOSTNAME}"
+  AP_BLUESKY_BRIDGE_DISPLAY_NAME="Bluesky Bridge"
+  AP_BLUESKY_BRIDGE_DESCRIPTION="This account relays replies from external Bluesky users."
 
-  echo "The sidecar creates a 'mastodon bridge account' on your PDS to post incoming"
-  echo "replies from Mastodon users. The default handle is: mastodon.${PDS_HOSTNAME}"
+  echo "The Bluesky bridge creates an account on your PDS that relays replies"
+  echo "from Bluesky users on other PDS instances into Mastodon threads."
   echo
-  read -p "Use a custom mastodon bridge account handle? (y/N): " CUSTOM_BRIDGE
-  if [[ "${CUSTOM_BRIDGE}" =~ ^[Yy] ]]; then
-    read -p "Enter mastodon bridge account handle (e.g. fediverse.${PDS_HOSTNAME}): " AP_MASTODON_BRIDGE_HANDLE
-    if [[ -z "${AP_MASTODON_BRIDGE_HANDLE}" ]]; then
-      AP_MASTODON_BRIDGE_HANDLE="mastodon.${PDS_HOSTNAME}"
-      echo "  Using default: ${AP_MASTODON_BRIDGE_HANDLE}"
-    fi
-    read -p "Enter mastodon bridge account display name (default: Mastodon Bridge): " AP_MASTODON_BRIDGE_DISPLAY_NAME
-    if [[ -z "${AP_MASTODON_BRIDGE_DISPLAY_NAME}" ]]; then
-      AP_MASTODON_BRIDGE_DISPLAY_NAME="Mastodon Bridge"
-    fi
+  AP_BLUESKY_BRIDGE_ENABLED="true"
+  read -p "Enable the Bluesky bridge account? (Y/n): " ENABLE_BLUESKY_BRIDGE
+  if [[ "${ENABLE_BLUESKY_BRIDGE}" =~ ^[Nn] ]]; then
+    AP_BLUESKY_BRIDGE_ENABLED="false"
   fi
   echo
 
@@ -196,9 +195,16 @@ AP_DB_LOCATION=/data/activitypub.sqlite
 AP_FIREHOSE_ENABLED=${AP_FIREHOSE_ENABLED}
 
 # Mastodon bridge account (auto-created on startup)
+AP_MASTODON_BRIDGE_ENABLED=${AP_MASTODON_BRIDGE_ENABLED}
 AP_MASTODON_BRIDGE_HANDLE=${AP_MASTODON_BRIDGE_HANDLE}
 AP_MASTODON_BRIDGE_DISPLAY_NAME=${AP_MASTODON_BRIDGE_DISPLAY_NAME}
 AP_MASTODON_BRIDGE_DESCRIPTION=${AP_MASTODON_BRIDGE_DESCRIPTION}
+
+# Bluesky bridge account (auto-created on startup)
+AP_BLUESKY_BRIDGE_ENABLED=${AP_BLUESKY_BRIDGE_ENABLED}
+AP_BLUESKY_BRIDGE_HANDLE=${AP_BLUESKY_BRIDGE_HANDLE}
+AP_BLUESKY_BRIDGE_DISPLAY_NAME=${AP_BLUESKY_BRIDGE_DISPLAY_NAME}
+AP_BLUESKY_BRIDGE_DESCRIPTION=${AP_BLUESKY_BRIDGE_DESCRIPTION}
 
 # Logging
 LOG_ENABLED=true
@@ -405,8 +411,11 @@ SYSTEMD_UNIT_FILE
   systemctl daemon-reload
 
   #
-  # Restart services
+  # Pull latest image and restart services
   #
+  echo "* Pulling latest Docker image..."
+  docker pull "${AP_IMAGE}"
+
   echo "* Restarting services..."
   systemctl restart pds
 
@@ -446,15 +455,12 @@ View PDS logs         : sudo docker logs -f pds
 View ActivityPub logs : sudo docker logs -f activitypub
 Restart services      : sudo systemctl restart pds
 
-Bridge Account
+Bridge Accounts
 ------------------------------------------------------------------------
-The ActivityPub sidecar automatically creates a "mastodon" bridge account
-on your PDS. This account is used to post replies from Mastodon and other
-Fediverse users. The bridge account is hidden from ActivityPub federation
-and won't be discoverable from the Fediverse.
-
-Bridge handle         : ${AP_MASTODON_BRIDGE_HANDLE}
-Bridge display name   : ${AP_MASTODON_BRIDGE_DISPLAY_NAME}
+Mastodon bridge       : ${AP_MASTODON_BRIDGE_ENABLED}
+  Handle              : ${AP_MASTODON_BRIDGE_HANDLE}
+Bluesky bridge        : ${AP_BLUESKY_BRIDGE_ENABLED}
+  Handle              : ${AP_BLUESKY_BRIDGE_HANDLE}
 
 ActivityPub Endpoints
 ------------------------------------------------------------------------
@@ -489,18 +495,25 @@ INSTALLER_MESSAGE
     echo "Testing ActivityPub endpoints..."
     echo
 
+    NODEINFO_URL="http://localhost:${AP_PORT}/nodeinfo/2.1"
+    WEBFINGER_URL="http://localhost:${AP_PORT}/.well-known/webfinger?resource=acct:test@${AP_HOSTNAME}"
+
     # Test NodeInfo
     echo "* Testing NodeInfo endpoint..."
-    NODEINFO_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${AP_PORT}/nodeinfo/2.1" 2>/dev/null || echo "failed")
+    echo "  ${NODEINFO_URL}"
+    NODEINFO_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "${NODEINFO_URL}" 2>/dev/null || echo "failed")
     if [[ "${NODEINFO_RESPONSE}" == "200" ]]; then
       echo "  NodeInfo: OK (HTTP 200)"
     else
       echo "  NodeInfo: Response code ${NODEINFO_RESPONSE} (may need a moment to start)"
     fi
 
+    echo
+
     # Test WebFinger (will likely return 404 without a valid user, but that's okay)
     echo "* Testing WebFinger endpoint..."
-    WEBFINGER_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${AP_PORT}/.well-known/webfinger?resource=acct:test@${AP_HOSTNAME}" 2>/dev/null || echo "failed")
+    echo "  ${WEBFINGER_URL}"
+    WEBFINGER_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "${WEBFINGER_URL}" 2>/dev/null || echo "failed")
     if [[ "${WEBFINGER_RESPONSE}" == "200" ]] || [[ "${WEBFINGER_RESPONSE}" == "404" ]]; then
       echo "  WebFinger: OK (HTTP ${WEBFINGER_RESPONSE})"
     else

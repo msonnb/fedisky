@@ -123,28 +123,36 @@ export class APFederationService {
     await this.ctx.db.migrate()
     logger.info('database migrations completed')
 
-    await this.ctx.mastodonBridgeAccount.initialize()
-    if (this.ctx.mastodonBridgeAccount.isAvailable()) {
-      logger.info('mastodon bridge account initialized: {did} {handle}', {
-        did: this.ctx.mastodonBridgeAccount.did,
-        handle: this.ctx.mastodonBridgeAccount.handle,
-      })
+    if (this.ctx.cfg.mastodonBridge.enabled) {
+      await this.ctx.mastodonBridgeAccount.initialize()
+      if (this.ctx.mastodonBridgeAccount.isAvailable()) {
+        logger.info('mastodon bridge account initialized: {did} {handle}', {
+          did: this.ctx.mastodonBridgeAccount.did,
+          handle: this.ctx.mastodonBridgeAccount.handle,
+        })
+      } else {
+        logger.warn(
+          'mastodon bridge account not available - incoming ActivityPub replies will be disabled',
+        )
+      }
     } else {
-      logger.warn(
-        'mastodon bridge account not available - incoming ActivityPub replies will be disabled',
-      )
+      logger.info('mastodon bridge account disabled by configuration')
     }
 
-    await this.ctx.blueskyBridgeAccount.initialize()
-    if (this.ctx.blueskyBridgeAccount.isAvailable()) {
-      logger.info('bluesky bridge account initialized: {did} {handle}', {
-        did: this.ctx.blueskyBridgeAccount.did,
-        handle: this.ctx.blueskyBridgeAccount.handle,
-      })
+    if (this.ctx.cfg.blueskyBridge.enabled) {
+      await this.ctx.blueskyBridgeAccount.initialize()
+      if (this.ctx.blueskyBridgeAccount.isAvailable()) {
+        logger.info('bluesky bridge account initialized: {did} {handle}', {
+          did: this.ctx.blueskyBridgeAccount.did,
+          handle: this.ctx.blueskyBridgeAccount.handle,
+        })
+      } else {
+        logger.warn(
+          'bluesky bridge account not available - external reply federation will be disabled',
+        )
+      }
     } else {
-      logger.warn(
-        'bluesky bridge account not available - external reply federation will be disabled',
-      )
+      logger.info('bluesky bridge account disabled by configuration')
     }
 
     const port = this.ctx.cfg.service.port

@@ -12,11 +12,13 @@ export function readEnv() {
     dbLocation: envStr('AP_DB_LOCATION'),
     firehoseEnabled: envBool('AP_FIREHOSE_ENABLED'),
     firehoseCursor: envStr('AP_FIREHOSE_CURSOR'),
+    mastodonBridgeEnabled: envBool('AP_MASTODON_BRIDGE_ENABLED'),
     mastodonBridgeHandle: envStr('AP_MASTODON_BRIDGE_HANDLE'),
     mastodonBridgeDisplayName: envStr('AP_MASTODON_BRIDGE_DISPLAY_NAME'),
     mastodonBridgeDescription: envStr('AP_MASTODON_BRIDGE_DESCRIPTION'),
     allowPrivateAddress: envBool('AP_ALLOW_PRIVATE_ADDRESS'),
     // Bluesky bridge account config
+    blueskyBridgeEnabled: envBool('AP_BLUESKY_BRIDGE_ENABLED'),
     blueskyBridgeHandle: envStr('AP_BLUESKY_BRIDGE_HANDLE'),
     blueskyBridgeDisplayName: envStr('AP_BLUESKY_BRIDGE_DISPLAY_NAME'),
     blueskyBridgeDescription: envStr('AP_BLUESKY_BRIDGE_DESCRIPTION'),
@@ -51,6 +53,7 @@ export interface APFederationConfig {
   }
   /** Mastodon bridge account for posting incoming Fediverse replies */
   mastodonBridge: {
+    enabled: boolean
     handle: string
     email: string
     displayName: string
@@ -58,6 +61,7 @@ export interface APFederationConfig {
   }
   /** Bluesky bridge account for federating external Bluesky replies */
   blueskyBridge: {
+    enabled: boolean
     handle: string
     email: string
     displayName: string
@@ -112,6 +116,7 @@ export function envToConfig(env: ServerEnvironment): APFederationConfig {
       cursor: env.firehoseCursor ? parseInt(env.firehoseCursor, 10) : undefined,
     },
     mastodonBridge: {
+      enabled: env.mastodonBridgeEnabled ?? true,
       handle: mastodonBridgeHandle,
       email: `noreply+${mastodonBridgeHandle}@${hostname}`,
       displayName: env.mastodonBridgeDisplayName ?? 'Mastodon Bridge',
@@ -120,6 +125,7 @@ export function envToConfig(env: ServerEnvironment): APFederationConfig {
         'This account posts content from Mastodon and other Fediverse servers.',
     },
     blueskyBridge: {
+      enabled: env.blueskyBridgeEnabled ?? true,
       handle: blueskyBridgeHandle,
       email: `noreply+${blueskyBridgeHandle}@${hostname}`,
       displayName: env.blueskyBridgeDisplayName ?? 'Bluesky Bridge',
