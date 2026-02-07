@@ -1,5 +1,5 @@
 import { AtUri } from '@atproto/syntax'
-import { Accept, Create, Follow, Note, Undo } from '@fedify/vocab'
+import { Accept, Create, Delete, Follow, Note, Undo } from '@fedify/vocab'
 import escapeHtml from 'escape-html'
 import { AppContext } from '../context'
 import { postConverter } from '../conversion'
@@ -110,6 +110,33 @@ export function setupInboxListeners(ctx: AppContext) {
 
         await ctx.db.deleteFollow(parsed.identifier, (undo.actorId as URL).href)
         event?.set('activity.unfollow_processed', true)
+      } catch (err) {
+        event?.setError(err instanceof Error ? err : new Error(String(err)))
+      }
+    })
+    .on(Delete, async (_fedCtx, del) => {
+      const event = getWideEvent()
+      event?.set('activity.type', 'Delete')
+      event?.set('activity.id', del.id?.href)
+
+      try {
+        const actorId = del.actorId
+        if (actorId == null) {
+          event?.set('activity.ignored_reason', 'missing_actor')
+          return
+        }
+
+        event?.set('activity.actor_id', actorId.href)
+
+        // When an actor is deleted, the actor and object are the same URI
+        const objectId = del.objectId
+        if (objectId == null || objectId.href !== actorId.href) {
+          event?.set('activity.ignored_reason', 'not_actor_deletion')
+          return
+        }
+
+        const deleted = await ctx.db.deleteFollowsByActor(actorId.href)
+        event?.set('activity.follows_deleted', deleted)
       } catch (err) {
         event?.setError(err instanceof Error ? err : new Error(String(err)))
       }

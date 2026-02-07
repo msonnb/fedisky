@@ -71,6 +71,14 @@ export class APDatabase {
       .execute()
   }
 
+  async deleteFollowsByActor(actorUri: string): Promise<number> {
+    const result = await this.db
+      .deleteFrom('ap_follow')
+      .where('actorUri', '=', actorUri)
+      .executeTakeFirst()
+    return Number(result.numDeletedRows)
+  }
+
   async getFollows(opts: {
     userDid: string
     cursor?: string | null

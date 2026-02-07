@@ -1,6 +1,6 @@
 import type { InboxContext } from '@fedify/fedify'
 import { createFederation, createInboxContext } from '@fedify/testing'
-import { Accept, Create, Follow, Note, Person, Undo } from '@fedify/vocab'
+import { Accept, Create, Delete, Follow, Note, Person, Undo } from '@fedify/vocab'
 import { Temporal } from '@js-temporal/polyfill'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { AppContext } from '../../context'
@@ -224,6 +224,103 @@ describe('inbox', () => {
 
       follows = await db.getFollowers(testData.users.alice.did)
       expect(follows).toHaveLength(0)
+    })
+  })
+
+  describe('Delete actor handling', () => {
+    it('should delete all follows from the deleted actor', async () => {
+      const federation = createTestFederation()
+      federation.setActorDispatcher('/users/{identifier}', () => null)
+
+      const pdsClient = createMockPdsClient()
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
+        isAvailable: vi.fn().mockReturnValue(false),
+      })
+
+      mockCtx = {
+        db,
+        pdsClient,
+        mastodonBridgeAccount,
+        federation,
+        cfg: {
+          service: { publicUrl: 'https://ap.example' },
+          mastodonBridge: { handle: 'bridge.test' },
+        },
+      } as unknown as AppContext
+
+      // Create follows from the same actor to multiple users
+      await db.createFollow({
+        userDid: testData.users.alice.did,
+        activityId: 'https://remote.example/activities/follow-1',
+        actorUri: 'https://remote.example/users/bob',
+        actorInbox: 'https://remote.example/users/bob/inbox',
+        createdAt: new Date().toISOString(),
+      })
+      await db.createFollow({
+        userDid: testData.users.bob.did,
+        activityId: 'https://remote.example/activities/follow-2',
+        actorUri: 'https://remote.example/users/bob',
+        actorInbox: 'https://remote.example/users/bob/inbox',
+        createdAt: new Date().toISOString(),
+      })
+
+      expect(await db.getFollowers(testData.users.alice.did)).toHaveLength(1)
+      expect(await db.getFollowers(testData.users.bob.did)).toHaveLength(1)
+
+      setupInboxListeners(mockCtx)
+
+      const del = new Delete({
+        id: new URL('https://remote.example/activities/delete-1'),
+        actor: new URL('https://remote.example/users/bob'),
+        object: new URL('https://remote.example/users/bob'),
+      })
+
+      await invokeInboxListener(federation, 'Delete', del)
+
+      expect(await db.getFollowers(testData.users.alice.did)).toHaveLength(0)
+      expect(await db.getFollowers(testData.users.bob.did)).toHaveLength(0)
+    })
+
+    it('should not delete follows when object is not the actor', async () => {
+      const federation = createTestFederation()
+      federation.setActorDispatcher('/users/{identifier}', () => null)
+
+      const pdsClient = createMockPdsClient()
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
+        isAvailable: vi.fn().mockReturnValue(false),
+      })
+
+      mockCtx = {
+        db,
+        pdsClient,
+        mastodonBridgeAccount,
+        federation,
+        cfg: {
+          service: { publicUrl: 'https://ap.example' },
+          mastodonBridge: { handle: 'bridge.test' },
+        },
+      } as unknown as AppContext
+
+      await db.createFollow({
+        userDid: testData.users.alice.did,
+        activityId: 'https://remote.example/activities/follow-1',
+        actorUri: 'https://remote.example/users/bob',
+        actorInbox: 'https://remote.example/users/bob/inbox',
+        createdAt: new Date().toISOString(),
+      })
+
+      setupInboxListeners(mockCtx)
+
+      // Delete of a note, not the actor itself
+      const del = new Delete({
+        id: new URL('https://remote.example/activities/delete-2'),
+        actor: new URL('https://remote.example/users/bob'),
+        object: new URL('https://remote.example/notes/some-note'),
+      })
+
+      await invokeInboxListener(federation, 'Delete', del)
+
+      expect(await db.getFollowers(testData.users.alice.did)).toHaveLength(1)
     })
   })
 
