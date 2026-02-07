@@ -3,6 +3,7 @@ export interface BridgeAccountConfig {
   email: string
   displayName: string
   description: string
+  avatarUrl?: string
 }
 
 export interface BridgeAccountData {

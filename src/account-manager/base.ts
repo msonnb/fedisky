@@ -119,7 +119,8 @@ export abstract class BaseAccountManager {
 
   private async createAccount(): Promise<void> {
     const dbOps = this.getDbOps()
-    const { handle, email, displayName, description } = this.getAccountConfig()
+    const { handle, email, displayName, description, avatarUrl } =
+      this.getAccountConfig()
 
     logger.info(`creating new ${this.accountName} account`, { handle, email })
 
@@ -163,7 +164,7 @@ export abstract class BaseAccountManager {
         handle: this._handle,
       })
 
-      await this.setupProfile(displayName, description)
+      await this.setupProfile(displayName, description, avatarUrl)
 
       this._available = true
     } catch (err) {
@@ -179,6 +180,7 @@ export abstract class BaseAccountManager {
   private async setupProfile(
     displayName: string,
     description: string,
+    avatarUrl?: string,
   ): Promise<void> {
     if (!this._accessJwt || !this._did) {
       logger.warn('cannot setup profile: no access token or DID')
@@ -200,11 +202,42 @@ export abstract class BaseAccountManager {
         // Profile doesn't exist yet, that's fine
       }
 
+      let avatar: BlobRef | undefined
+      if (avatarUrl) {
+        try {
+          const response = await fetch(avatarUrl)
+          if (response.ok) {
+            const contentType =
+              response.headers.get('content-type') || 'image/svg+xml'
+            const data = new Uint8Array(await response.arrayBuffer())
+            const res = await agent.com.atproto.repo.uploadBlob(data, {
+              encoding: contentType,
+            })
+            avatar = res.data.blob
+            logger.info(`uploaded avatar for ${this.accountName} account`, {
+              avatarUrl,
+              contentType,
+            })
+          } else {
+            logger.warn(`failed to fetch avatar for ${this.accountName}`, {
+              avatarUrl,
+              status: response.status,
+            })
+          }
+        } catch (err) {
+          logger.warn(`failed to upload avatar for ${this.accountName}`, {
+            avatarUrl,
+            err,
+          })
+        }
+      }
+
       const profileRecord = {
         ...(existingProfile || {}),
         $type: 'app.bsky.actor.profile',
         displayName,
         description,
+        ...(avatar ? { avatar } : {}),
       }
 
       await agent.com.atproto.repo.putRecord({

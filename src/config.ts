@@ -16,12 +16,14 @@ export function readEnv() {
     mastodonBridgeHandle: envStr('AP_MASTODON_BRIDGE_HANDLE'),
     mastodonBridgeDisplayName: envStr('AP_MASTODON_BRIDGE_DISPLAY_NAME'),
     mastodonBridgeDescription: envStr('AP_MASTODON_BRIDGE_DESCRIPTION'),
+    mastodonBridgeAvatarUrl: envStr('AP_MASTODON_BRIDGE_AVATAR_URL'),
     allowPrivateAddress: envBool('AP_ALLOW_PRIVATE_ADDRESS'),
     // Bluesky bridge account config
     blueskyBridgeEnabled: envBool('AP_BLUESKY_BRIDGE_ENABLED'),
     blueskyBridgeHandle: envStr('AP_BLUESKY_BRIDGE_HANDLE'),
     blueskyBridgeDisplayName: envStr('AP_BLUESKY_BRIDGE_DISPLAY_NAME'),
     blueskyBridgeDescription: envStr('AP_BLUESKY_BRIDGE_DESCRIPTION'),
+    blueskyBridgeAvatarUrl: envStr('AP_BLUESKY_BRIDGE_AVATAR_URL'),
     // Constellation config
     constellationUrl: envStr('AP_CONSTELLATION_URL'),
     constellationPollInterval: envInt('AP_CONSTELLATION_POLL_INTERVAL'),
@@ -58,6 +60,7 @@ export interface APFederationConfig {
     email: string
     displayName: string
     description: string
+    avatarUrl?: string
   }
   /** Bluesky bridge account for federating external Bluesky replies */
   blueskyBridge: {
@@ -66,6 +69,7 @@ export interface APFederationConfig {
     email: string
     displayName: string
     description: string
+    avatarUrl?: string
   }
   /** Constellation service for discovering external Bluesky replies */
   constellation: {
@@ -123,6 +127,9 @@ export function envToConfig(env: ServerEnvironment): APFederationConfig {
       description:
         env.mastodonBridgeDescription ??
         'This account posts content from Mastodon and other Fediverse servers.',
+      avatarUrl:
+        env.mastodonBridgeAvatarUrl ??
+        'https://joinmastodon.org/logos/logo-purple.svg',
     },
     blueskyBridge: {
       enabled: env.blueskyBridgeEnabled ?? true,
@@ -132,6 +139,9 @@ export function envToConfig(env: ServerEnvironment): APFederationConfig {
       description:
         env.blueskyBridgeDescription ??
         'This account relays replies from external Bluesky users.',
+      avatarUrl:
+        env.blueskyBridgeAvatarUrl ??
+        'https://upload.wikimedia.org/wikipedia/commons/7/7a/Bluesky_Logo.svg',
     },
     constellation: {
       url: env.constellationUrl ?? '',
