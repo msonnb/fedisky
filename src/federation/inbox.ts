@@ -66,6 +66,7 @@ export function setupInboxListeners(ctx: AppContext) {
           activityId: (follow.id as URL).href,
           actorUri: (follower.id as URL).href,
           actorInbox: (follower.inboxId as URL).href,
+          actorSharedInbox: follower.endpoints?.sharedInbox?.href ?? null,
           createdAt: new Date().toISOString(),
         })
 

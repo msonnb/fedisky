@@ -1,6 +1,15 @@
 import type { InboxContext } from '@fedify/fedify'
 import { createFederation, createInboxContext } from '@fedify/testing'
-import { Accept, Create, Delete, Follow, Note, Person, Undo } from '@fedify/vocab'
+import {
+  Accept,
+  Create,
+  Delete,
+  Endpoints,
+  Follow,
+  Note,
+  Person,
+  Undo,
+} from '@fedify/vocab'
 import { Temporal } from '@js-temporal/polyfill'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { AppContext } from '../../context'
@@ -108,6 +117,9 @@ describe('inbox', () => {
         id: new URL('https://remote.example/users/alice'),
         preferredUsername: 'alice',
         inbox: new URL('https://remote.example/users/alice/inbox'),
+        endpoints: new Endpoints({
+          sharedInbox: new URL('https://remote.example/inbox'),
+        }),
       })
 
       const follow = new Follow({
@@ -124,6 +136,7 @@ describe('inbox', () => {
       expect(follows[0].actorInbox).toBe(
         'https://remote.example/users/alice/inbox',
       )
+      expect(follows[0].actorSharedInbox).toBe('https://remote.example/inbox')
 
       const sentActivities = federation.sentActivities
       expect(sentActivities.length).toBeGreaterThanOrEqual(1)
@@ -200,6 +213,7 @@ describe('inbox', () => {
         activityId: 'https://remote.example/activities/follow-1',
         actorUri: 'https://remote.example/users/bob',
         actorInbox: 'https://remote.example/users/bob/inbox',
+        actorSharedInbox: 'https://remote.example/inbox',
         createdAt: new Date().toISOString(),
       })
 
@@ -254,6 +268,7 @@ describe('inbox', () => {
         activityId: 'https://remote.example/activities/follow-1',
         actorUri: 'https://remote.example/users/bob',
         actorInbox: 'https://remote.example/users/bob/inbox',
+        actorSharedInbox: 'https://remote.example/inbox',
         createdAt: new Date().toISOString(),
       })
       await db.createFollow({
@@ -261,6 +276,7 @@ describe('inbox', () => {
         activityId: 'https://remote.example/activities/follow-2',
         actorUri: 'https://remote.example/users/bob',
         actorInbox: 'https://remote.example/users/bob/inbox',
+        actorSharedInbox: 'https://remote.example/inbox',
         createdAt: new Date().toISOString(),
       })
 
@@ -306,6 +322,7 @@ describe('inbox', () => {
         activityId: 'https://remote.example/activities/follow-1',
         actorUri: 'https://remote.example/users/bob',
         actorInbox: 'https://remote.example/users/bob/inbox',
+        actorSharedInbox: 'https://remote.example/inbox',
         createdAt: new Date().toISOString(),
       })
 

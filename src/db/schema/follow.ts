@@ -3,6 +3,7 @@ export interface APFollow {
   activityId: string
   actorUri: string
   actorInbox: string
+  actorSharedInbox: string | null
   createdAt: string
 }
 

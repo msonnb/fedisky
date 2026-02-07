@@ -27,6 +27,9 @@ export function setupFollowersDispatcher(ctx: AppContext) {
             items: follows.map((follow) => ({
               id: new URL(follow.actorUri),
               inboxId: new URL(follow.actorInbox),
+              endpoints: follow.actorSharedInbox
+                ? { sharedInbox: new URL(follow.actorSharedInbox) }
+                : null,
             })),
             nextCursor,
           }

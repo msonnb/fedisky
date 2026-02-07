@@ -20,6 +20,7 @@ describe('APDatabase', () => {
         activityId: 'https://mastodon.social/activity/123',
         actorUri: 'https://mastodon.social/users/alice',
         actorInbox: 'https://mastodon.social/users/alice/inbox',
+        actorSharedInbox: 'https://mastodon.social/inbox',
         createdAt: new Date().toISOString(),
       }
 
@@ -40,6 +41,7 @@ describe('APDatabase', () => {
         activityId: 'https://mastodon.social/activity/123',
         actorUri: 'https://mastodon.social/users/alice',
         actorInbox: 'https://mastodon.social/users/alice/inbox',
+        actorSharedInbox: 'https://mastodon.social/inbox',
         createdAt: new Date().toISOString(),
       }
 
@@ -63,6 +65,7 @@ describe('APDatabase', () => {
         activityId: 'https://mastodon.social/activity/123',
         actorUri: 'https://mastodon.social/users/alice',
         actorInbox: 'https://mastodon.social/users/alice/inbox',
+        actorSharedInbox: 'https://mastodon.social/inbox',
         createdAt: new Date().toISOString(),
       }
       const follow2 = {
@@ -70,6 +73,7 @@ describe('APDatabase', () => {
         activityId: 'https://mastodon.social/activity/124',
         actorUri: 'https://mastodon.social/users/bob',
         actorInbox: 'https://mastodon.social/users/bob/inbox',
+        actorSharedInbox: 'https://mastodon.social/inbox',
         createdAt: new Date().toISOString(),
       }
 

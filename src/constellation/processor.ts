@@ -241,6 +241,9 @@ export class ConstellationProcessor {
           followers.map((follower) => ({
             id: new URL(follower.actorUri),
             inboxId: new URL(follower.actorInbox),
+            endpoints: follower.actorSharedInbox
+              ? { sharedInbox: new URL(follower.actorSharedInbox) }
+              : null,
           })),
           activity,
         )
