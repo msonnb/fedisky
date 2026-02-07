@@ -1,5 +1,14 @@
 import { AtUri } from '@atproto/syntax'
-import { Accept, Create, Delete, Follow, Note, Undo } from '@fedify/vocab'
+import {
+  Accept,
+  Announce,
+  Create,
+  Delete,
+  Follow,
+  Like,
+  Note,
+  Undo,
+} from '@fedify/vocab'
 import escapeHtml from 'escape-html'
 import { AppContext } from '../context'
 import { postConverter } from '../conversion'
@@ -87,30 +96,55 @@ export function setupInboxListeners(ctx: AppContext) {
 
       try {
         const object = await undo.getObject()
-        if (!(object instanceof Follow)) {
-          event?.set('activity.ignored_reason', 'not_a_follow')
-          return
+
+        if (object instanceof Follow) {
+          event?.set('activity.inner_type', 'Follow')
+
+          if (undo.actorId == null || object.objectId == null) {
+            event?.set('activity.ignored_reason', 'missing_actor_or_object')
+            return
+          }
+
+          event?.set('activity.actor_id', undo.actorId.href)
+
+          const parsed = fedCtx.parseUri(object.objectId)
+          if (parsed == null || parsed.type !== 'actor') {
+            event?.set('activity.ignored_reason', 'object_not_actor')
+            return
+          }
+
+          event?.set('user.did', parsed.identifier)
+
+          await ctx.db.deleteFollow(
+            parsed.identifier,
+            (undo.actorId as URL).href,
+          )
+          event?.set('activity.unfollow_processed', true)
+        } else if (object instanceof Like) {
+          event?.set('activity.inner_type', 'Like')
+
+          const likeId = object.id
+          if (likeId == null) {
+            event?.set('activity.ignored_reason', 'missing_like_id')
+            return
+          }
+
+          await ctx.db.deleteLike(likeId.href)
+          event?.set('activity.unlike_processed', true)
+        } else if (object instanceof Announce) {
+          event?.set('activity.inner_type', 'Announce')
+
+          const announceId = object.id
+          if (announceId == null) {
+            event?.set('activity.ignored_reason', 'missing_announce_id')
+            return
+          }
+
+          await ctx.db.deleteRepost(announceId.href)
+          event?.set('activity.unrepost_processed', true)
+        } else {
+          event?.set('activity.ignored_reason', 'unsupported_undo_type')
         }
-
-        event?.set('activity.inner_type', 'Follow')
-
-        if (undo.actorId == null || object.objectId == null) {
-          event?.set('activity.ignored_reason', 'missing_actor_or_object')
-          return
-        }
-
-        event?.set('activity.actor_id', undo.actorId.href)
-
-        const parsed = fedCtx.parseUri(object.objectId)
-        if (parsed == null || parsed.type !== 'actor') {
-          event?.set('activity.ignored_reason', 'object_not_actor')
-          return
-        }
-
-        event?.set('user.did', parsed.identifier)
-
-        await ctx.db.deleteFollow(parsed.identifier, (undo.actorId as URL).href)
-        event?.set('activity.unfollow_processed', true)
       } catch (err) {
         event?.setError(err instanceof Error ? err : new Error(String(err)))
       }
@@ -136,9 +170,15 @@ export function setupInboxListeners(ctx: AppContext) {
         }
 
         if (objectId.href === actorId.href) {
-          // Actor deletion: delete follows and bridged posts
+          // Actor deletion: delete follows, likes, reposts, and bridged posts
           const deleted = await ctx.db.deleteFollowsByActor(actorId.href)
           event?.set('activity.follows_deleted', deleted)
+
+          const likesDeleted = await ctx.db.deleteLikesByActor(actorId.href)
+          event?.set('activity.likes_deleted', likesDeleted)
+
+          const repostsDeleted = await ctx.db.deleteRepostsByActor(actorId.href)
+          event?.set('activity.reposts_deleted', repostsDeleted)
 
           // Delete bridged posts for this actor
           if (ctx.mastodonBridgeAccount.isAvailable()) {
@@ -334,6 +374,106 @@ export function setupInboxListeners(ctx: AppContext) {
         }
 
         event?.set('activity.bridge_post_created', true)
+      } catch (err) {
+        event?.setError(err instanceof Error ? err : new Error(String(err)))
+      }
+    })
+    .on(Like, async (fedCtx, like) => {
+      const event = getWideEvent()
+      event?.set('activity.type', 'Like')
+      event?.set('activity.id', like.id?.href)
+
+      try {
+        if (
+          like.id === null ||
+          like.actorId === null ||
+          like.objectId === null
+        ) {
+          event?.set('activity.ignored_reason', 'missing_required_fields')
+          return
+        }
+
+        event?.set('activity.actor_id', like.actorId.href)
+
+        const parsed = fedCtx.parseUri(like.objectId)
+        if (!parsed || parsed.type !== 'object') {
+          event?.set('activity.ignored_reason', 'object_not_local_post')
+          return
+        }
+
+        const urlPath = like.objectId.pathname
+        const postUri = urlPath.slice(
+          urlPath.indexOf('posts/') + 'posts/'.length,
+        )
+        const postAtUri = new AtUri(postUri)
+        const postAuthorDid = postAtUri.host
+        event?.set('user.did', postAuthorDid)
+
+        const account = await ctx.pdsClient.getAccount(postAuthorDid)
+        if (!account) {
+          event?.set('activity.ignored_reason', 'user_not_found')
+          return
+        }
+
+        await ctx.db.createLike({
+          activityId: (like.id as URL).href,
+          postAtUri: postAtUri.toString(),
+          postAuthorDid,
+          apActorId: (like.actorId as URL).href,
+          createdAt: new Date().toISOString(),
+        })
+
+        event?.set('activity.like_stored', true)
+      } catch (err) {
+        event?.setError(err instanceof Error ? err : new Error(String(err)))
+      }
+    })
+    .on(Announce, async (fedCtx, announce) => {
+      const event = getWideEvent()
+      event?.set('activity.type', 'Announce')
+      event?.set('activity.id', announce.id?.href)
+
+      try {
+        if (
+          announce.id === null ||
+          announce.actorId === null ||
+          announce.objectId === null
+        ) {
+          event?.set('activity.ignored_reason', 'missing_required_fields')
+          return
+        }
+
+        event?.set('activity.actor_id', announce.actorId.href)
+
+        const parsed = fedCtx.parseUri(announce.objectId)
+        if (!parsed || parsed.type !== 'object') {
+          event?.set('activity.ignored_reason', 'object_not_local_post')
+          return
+        }
+
+        const urlPath = announce.objectId.pathname
+        const postUri = urlPath.slice(
+          urlPath.indexOf('posts/') + 'posts/'.length,
+        )
+        const postAtUri = new AtUri(postUri)
+        const postAuthorDid = postAtUri.host
+        event?.set('user.did', postAuthorDid)
+
+        const account = await ctx.pdsClient.getAccount(postAuthorDid)
+        if (!account) {
+          event?.set('activity.ignored_reason', 'user_not_found')
+          return
+        }
+
+        await ctx.db.createRepost({
+          activityId: (announce.id as URL).href,
+          postAtUri: postAtUri.toString(),
+          postAuthorDid,
+          apActorId: (announce.actorId as URL).href,
+          createdAt: new Date().toISOString(),
+        })
+
+        event?.set('activity.repost_stored', true)
       } catch (err) {
         event?.setError(err instanceof Error ? err : new Error(String(err)))
       }

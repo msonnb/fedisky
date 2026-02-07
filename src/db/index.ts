@@ -8,8 +8,10 @@ import {
   externalReply,
   follow,
   keyPair,
+  like,
   monitoredPost,
   postMapping,
+  repost,
 } from './schema'
 
 export type { DatabaseSchema } from './schema'
@@ -425,5 +427,87 @@ export class APDatabase {
       .where('parentAtUri', '=', parentAtUri)
       .executeTakeFirst()
     return Number(result.numDeletedRows)
+  }
+
+  async createLike(data: like.APLike): Promise<like.APLike> {
+    await this.db
+      .insertInto('ap_like')
+      .values(data)
+      .onConflict((oc) => oc.doNothing())
+      .execute()
+    return data
+  }
+
+  async deleteLike(activityId: string): Promise<void> {
+    await this.db
+      .deleteFrom('ap_like')
+      .where('activityId', '=', activityId)
+      .execute()
+  }
+
+  async deleteLikesByActor(apActorId: string): Promise<number> {
+    const result = await this.db
+      .deleteFrom('ap_like')
+      .where('apActorId', '=', apActorId)
+      .executeTakeFirst()
+    return Number(result.numDeletedRows)
+  }
+
+  async getLikesForPost(postAtUri: string): Promise<like.APLike[]> {
+    return this.db
+      .selectFrom('ap_like')
+      .selectAll()
+      .where('postAtUri', '=', postAtUri)
+      .execute()
+  }
+
+  async getLikesCountForPost(postAtUri: string): Promise<number> {
+    const result = await this.db
+      .selectFrom('ap_like')
+      .select((eb) => eb.fn.count('activityId').as('count'))
+      .where('postAtUri', '=', postAtUri)
+      .executeTakeFirst()
+    return Number(result?.count ?? 0)
+  }
+
+  async createRepost(data: repost.APRepost): Promise<repost.APRepost> {
+    await this.db
+      .insertInto('ap_repost')
+      .values(data)
+      .onConflict((oc) => oc.doNothing())
+      .execute()
+    return data
+  }
+
+  async deleteRepost(activityId: string): Promise<void> {
+    await this.db
+      .deleteFrom('ap_repost')
+      .where('activityId', '=', activityId)
+      .execute()
+  }
+
+  async deleteRepostsByActor(apActorId: string): Promise<number> {
+    const result = await this.db
+      .deleteFrom('ap_repost')
+      .where('apActorId', '=', apActorId)
+      .executeTakeFirst()
+    return Number(result.numDeletedRows)
+  }
+
+  async getRepostsForPost(postAtUri: string): Promise<repost.APRepost[]> {
+    return this.db
+      .selectFrom('ap_repost')
+      .selectAll()
+      .where('postAtUri', '=', postAtUri)
+      .execute()
+  }
+
+  async getRepostsCountForPost(postAtUri: string): Promise<number> {
+    const result = await this.db
+      .selectFrom('ap_repost')
+      .select((eb) => eb.fn.count('activityId').as('count'))
+      .where('postAtUri', '=', postAtUri)
+      .executeTakeFirst()
+    return Number(result?.count ?? 0)
   }
 }

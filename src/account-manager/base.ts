@@ -274,7 +274,9 @@ export abstract class BaseAccountManager {
     return this.pdsClient.createAuthenticatedAgent(this._accessJwt)
   }
 
-  private async withAuthRetry<T>(fn: (agent: AtpAgent) => Promise<T>): Promise<T> {
+  private async withAuthRetry<T>(
+    fn: (agent: AtpAgent) => Promise<T>,
+  ): Promise<T> {
     if (!this._available) {
       throw new Error(`${this.accountName} account is not available`)
     }
