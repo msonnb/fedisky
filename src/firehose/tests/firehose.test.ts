@@ -645,6 +645,82 @@ describe('FirehoseProcessor', () => {
       expect(undo.id?.href).toContain(encodeURIComponent(repostUri))
     })
 
+    it('should clean up monitored post and external replies when post is deleted', async () => {
+      const federation = createFederation<void>({
+        contextData: undefined,
+        origin: 'https://ap.example',
+      })
+      federation.setActorDispatcher('/users/{identifier}', () => null)
+      federation.setObjectDispatcher(Note, '/posts/{uri}', () => null)
+
+      const pdsClient = createMockPdsClient()
+
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
+        isAvailable: vi.fn().mockReturnValue(true),
+        _did: 'did:plc:bridge',
+      })
+
+      const mockCtx = {
+        db,
+        pdsClient,
+        mastodonBridgeAccount,
+        blueskyBridgeAccount: createMockBlueskyBridgeAccount(),
+        federation,
+        cfg: {
+          service: { publicUrl: 'https://ap.example' },
+          pds: { url: 'https://pds.example' },
+          mastodonBridge: { handle: 'bridge.test' },
+        },
+      } as unknown as AppContext
+
+      const postUri = `at://${testData.users.alice.did}/app.bsky.feed.post/abc123`
+
+      // Create monitored post and external replies
+      await db.createMonitoredPost({
+        atUri: postUri,
+        authorDid: testData.users.alice.did,
+        lastChecked: null,
+        createdAt: new Date().toISOString(),
+      })
+      await db.createExternalReply({
+        atUri: 'at://did:plc:bridge/app.bsky.feed.post/ext-reply1',
+        parentAtUri: postUri,
+        authorDid: 'did:plc:bridge',
+        apNoteId: 'https://remote.example/notes/reply-1',
+        createdAt: new Date().toISOString(),
+      })
+      await db.createExternalReply({
+        atUri: 'at://did:plc:bridge/app.bsky.feed.post/ext-reply2',
+        parentAtUri: postUri,
+        authorDid: 'did:plc:bridge',
+        apNoteId: 'https://remote.example/notes/reply-2',
+        createdAt: new Date().toISOString(),
+      })
+
+      const processor = new FirehoseProcessor(mockCtx)
+      const processCommit = (processor as any).processCommit.bind(processor)
+
+      await processCommit({
+        repo: testData.users.alice.did,
+        ops: [
+          {
+            action: 'delete',
+            path: 'app.bsky.feed.post/abc123',
+          },
+        ],
+        seq: 1,
+      })
+
+      // Verify monitored post was cleaned up
+      const monitoredPosts = await db.getMonitoredPostsBatch(10)
+      const found = monitoredPosts.find((p) => p.atUri === postUri)
+      expect(found).toBeUndefined()
+
+      // Verify external replies were cleaned up
+      const replies = await db.getExternalRepliesByParent(postUri)
+      expect(replies).toHaveLength(0)
+    })
+
     it('should send Delete activity for regular post delete (not repost)', async () => {
       const federation = createFederation<void>({
         contextData: undefined,

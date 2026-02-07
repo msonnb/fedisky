@@ -357,6 +357,20 @@ export class FirehoseProcessor {
       event.set('activity.type', activity.constructor.name)
       event.set('activity.id', activity.id?.href)
 
+      // Clean up monitored post and external replies for deleted posts
+      const atUri = new AtUri(uri)
+      if (atUri.collection === 'app.bsky.feed.post') {
+        try {
+          const deletedReplies =
+            await this.ctx.db.deleteExternalRepliesByParent(uri)
+          event.set('cleanup.external_replies_deleted', deletedReplies)
+          await this.ctx.db.deleteMonitoredPost(uri)
+          event.set('cleanup.monitored_post_deleted', true)
+        } catch (cleanupErr) {
+          event.set('cleanup.error', String(cleanupErr))
+        }
+      }
+
       await this.sendActivityToFollowers({
         fedifyContext,
         did,

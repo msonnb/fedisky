@@ -254,6 +254,24 @@ export class APDatabase {
       .execute()
   }
 
+  async getPostMappingsByActor(
+    apActorId: string,
+  ): Promise<postMapping.APPostMapping[]> {
+    return this.db
+      .selectFrom('ap_post_mapping')
+      .selectAll()
+      .where('apActorId', '=', apActorId)
+      .execute()
+  }
+
+  async deletePostMappingsByActor(apActorId: string): Promise<number> {
+    const result = await this.db
+      .deleteFrom('ap_post_mapping')
+      .where('apActorId', '=', apActorId)
+      .executeTakeFirst()
+    return Number(result.numDeletedRows)
+  }
+
   async getBlueskyBridgeAccount(): Promise<
     blueskyBridgeAccount.APBlueskyBridgeAccount | undefined
   > {
@@ -399,5 +417,13 @@ export class APDatabase {
       .deleteFrom('ap_external_reply')
       .where('atUri', '=', atUri)
       .execute()
+  }
+
+  async deleteExternalRepliesByParent(parentAtUri: string): Promise<number> {
+    const result = await this.db
+      .deleteFrom('ap_external_reply')
+      .where('parentAtUri', '=', parentAtUri)
+      .executeTakeFirst()
+    return Number(result.numDeletedRows)
   }
 }

@@ -80,6 +80,7 @@ export function createMockMastodonBridgeAccount(
       uri: `at://${_did}/app.bsky.feed.post/test123`,
       cid: 'bafytest',
     }),
+    deleteRecord: vi.fn().mockResolvedValue(undefined),
     uploadBlob: vi.fn().mockResolvedValue({
       ref: { toString: () => 'bafyblob' },
       mimeType: 'image/jpeg',

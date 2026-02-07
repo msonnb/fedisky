@@ -297,13 +297,13 @@ describe('inbox', () => {
       expect(await db.getFollowers(testData.users.bob.did)).toHaveLength(0)
     })
 
-    it('should not delete follows when object is not the actor', async () => {
+    it('should delete bridged posts and post mappings when actor is deleted', async () => {
       const federation = createTestFederation()
       federation.setActorDispatcher('/users/{identifier}', () => null)
 
       const pdsClient = createMockPdsClient()
       const mastodonBridgeAccount = createMockMastodonBridgeAccount({
-        isAvailable: vi.fn().mockReturnValue(false),
+        isAvailable: vi.fn().mockReturnValue(true),
       })
 
       mockCtx = {
@@ -317,27 +317,136 @@ describe('inbox', () => {
         },
       } as unknown as AppContext
 
-      await db.createFollow({
-        userDid: testData.users.alice.did,
-        activityId: 'https://remote.example/activities/follow-1',
-        actorUri: 'https://remote.example/users/bob',
-        actorInbox: 'https://remote.example/users/bob/inbox',
-        actorSharedInbox: 'https://remote.example/inbox',
+      // Create post mappings for the actor being deleted
+      await db.createPostMapping({
+        atUri: 'at://did:plc:bridge/app.bsky.feed.post/reply1',
+        apNoteId: 'https://remote.example/notes/note-1',
+        apActorId: 'https://remote.example/users/bob',
+        apActorInbox: 'https://remote.example/users/bob/inbox',
+        createdAt: new Date().toISOString(),
+      })
+      await db.createPostMapping({
+        atUri: 'at://did:plc:bridge/app.bsky.feed.post/reply2',
+        apNoteId: 'https://remote.example/notes/note-2',
+        apActorId: 'https://remote.example/users/bob',
+        apActorInbox: 'https://remote.example/users/bob/inbox',
         createdAt: new Date().toISOString(),
       })
 
       setupInboxListeners(mockCtx)
 
-      // Delete of a note, not the actor itself
       const del = new Delete({
-        id: new URL('https://remote.example/activities/delete-2'),
+        id: new URL('https://remote.example/activities/delete-1'),
         actor: new URL('https://remote.example/users/bob'),
-        object: new URL('https://remote.example/notes/some-note'),
+        object: new URL('https://remote.example/users/bob'),
       })
 
       await invokeInboxListener(federation, 'Delete', del)
 
-      expect(await db.getFollowers(testData.users.alice.did)).toHaveLength(1)
+      // Verify bridged posts were deleted via bridge account
+      expect(mastodonBridgeAccount.deleteRecord).toHaveBeenCalledTimes(2)
+      expect(mastodonBridgeAccount.deleteRecord).toHaveBeenCalledWith(
+        'app.bsky.feed.post',
+        'reply1',
+      )
+      expect(mastodonBridgeAccount.deleteRecord).toHaveBeenCalledWith(
+        'app.bsky.feed.post',
+        'reply2',
+      )
+
+      // Verify post mappings were removed
+      const mappings = await db.getPostMappingsByActor(
+        'https://remote.example/users/bob',
+      )
+      expect(mappings).toHaveLength(0)
+    })
+  })
+
+  describe('Delete note handling', () => {
+    it('should delete bridged post and mapping when note is deleted', async () => {
+      const federation = createTestFederation()
+      federation.setActorDispatcher('/users/{identifier}', () => null)
+
+      const pdsClient = createMockPdsClient()
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
+        isAvailable: vi.fn().mockReturnValue(true),
+      })
+
+      mockCtx = {
+        db,
+        pdsClient,
+        mastodonBridgeAccount,
+        federation,
+        cfg: {
+          service: { publicUrl: 'https://ap.example' },
+          mastodonBridge: { handle: 'bridge.test' },
+        },
+      } as unknown as AppContext
+
+      // Create a post mapping for the note being deleted
+      const bridgedUri = 'at://did:plc:bridge/app.bsky.feed.post/reply123'
+      const noteId = 'https://remote.example/notes/note-1'
+      await db.createPostMapping({
+        atUri: bridgedUri,
+        apNoteId: noteId,
+        apActorId: 'https://remote.example/users/bob',
+        apActorInbox: 'https://remote.example/users/bob/inbox',
+        createdAt: new Date().toISOString(),
+      })
+
+      setupInboxListeners(mockCtx)
+
+      const del = new Delete({
+        id: new URL('https://remote.example/activities/delete-note-1'),
+        actor: new URL('https://remote.example/users/bob'),
+        object: new URL(noteId),
+      })
+
+      await invokeInboxListener(federation, 'Delete', del)
+
+      // Verify bridged post was deleted
+      expect(mastodonBridgeAccount.deleteRecord).toHaveBeenCalledWith(
+        'app.bsky.feed.post',
+        'reply123',
+      )
+
+      // Verify mapping was removed
+      const mapping = await db.getPostMappingByApNoteId(noteId)
+      expect(mapping).toBeUndefined()
+    })
+
+    it('should be a no-op when no mapping exists for deleted note', async () => {
+      const federation = createTestFederation()
+      federation.setActorDispatcher('/users/{identifier}', () => null)
+
+      const pdsClient = createMockPdsClient()
+      const mastodonBridgeAccount = createMockMastodonBridgeAccount({
+        isAvailable: vi.fn().mockReturnValue(true),
+      })
+
+      mockCtx = {
+        db,
+        pdsClient,
+        mastodonBridgeAccount,
+        federation,
+        cfg: {
+          service: { publicUrl: 'https://ap.example' },
+          mastodonBridge: { handle: 'bridge.test' },
+        },
+      } as unknown as AppContext
+
+      setupInboxListeners(mockCtx)
+
+      const del = new Delete({
+        id: new URL('https://remote.example/activities/delete-note-2'),
+        actor: new URL('https://remote.example/users/bob'),
+        object: new URL('https://remote.example/notes/nonexistent'),
+      })
+
+      await invokeInboxListener(federation, 'Delete', del)
+
+      // Should not attempt to delete any record
+      expect(mastodonBridgeAccount.deleteRecord).not.toHaveBeenCalled()
     })
   })
 

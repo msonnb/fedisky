@@ -274,56 +274,7 @@ export abstract class BaseAccountManager {
     return this.pdsClient.createAuthenticatedAgent(this._accessJwt)
   }
 
-  async createRecord(
-    collection: string,
-    record: Record<string, unknown>,
-    rkey?: string,
-  ): Promise<{ uri: string; cid: string }> {
-    if (!this._available || !this._did) {
-      throw new Error(`${this.accountName} account is not available`)
-    }
-
-    const agent = await this.getAgent()
-
-    try {
-      const res = await agent.com.atproto.repo.createRecord({
-        repo: this._did,
-        collection,
-        rkey,
-        record,
-      })
-
-      return {
-        uri: res.data.uri,
-        cid: res.data.cid,
-      }
-    } catch (err: unknown) {
-      // If we get an auth error, try to refresh and retry
-      const error = err as { status?: number; error?: string }
-      if (
-        error.status === 400 &&
-        (error.error === 'ExpiredToken' || error.error === 'InvalidToken')
-      ) {
-        if (this._refreshJwt) {
-          await this.refreshSession(this._refreshJwt)
-          const retryAgent = await this.getAgent()
-          const res = await retryAgent.com.atproto.repo.createRecord({
-            repo: this._did,
-            collection,
-            rkey,
-            record,
-          })
-          return {
-            uri: res.data.uri,
-            cid: res.data.cid,
-          }
-        }
-      }
-      throw err
-    }
-  }
-
-  async uploadBlob(data: Uint8Array, mimeType: string): Promise<BlobRef> {
+  private async withAuthRetry<T>(fn: (agent: AtpAgent) => Promise<T>): Promise<T> {
     if (!this._available) {
       throw new Error(`${this.accountName} account is not available`)
     }
@@ -331,27 +282,64 @@ export abstract class BaseAccountManager {
     const agent = await this.getAgent()
 
     try {
+      return await fn(agent)
+    } catch (err: unknown) {
+      const error = err as { status?: number; error?: string }
+      if (
+        error.status === 400 &&
+        (error.error === 'ExpiredToken' || error.error === 'InvalidToken') &&
+        this._refreshJwt
+      ) {
+        await this.refreshSession(this._refreshJwt)
+        const retryAgent = await this.getAgent()
+        return await fn(retryAgent)
+      }
+      throw err
+    }
+  }
+
+  async createRecord(
+    collection: string,
+    record: Record<string, unknown>,
+    rkey?: string,
+  ): Promise<{ uri: string; cid: string }> {
+    if (!this._did) {
+      throw new Error(`${this.accountName} account is not available`)
+    }
+    const did = this._did
+
+    return this.withAuthRetry(async (agent) => {
+      const res = await agent.com.atproto.repo.createRecord({
+        repo: did,
+        collection,
+        rkey,
+        record,
+      })
+      return { uri: res.data.uri, cid: res.data.cid }
+    })
+  }
+
+  async deleteRecord(collection: string, rkey: string): Promise<void> {
+    if (!this._did) {
+      throw new Error(`${this.accountName} account is not available`)
+    }
+    const did = this._did
+
+    await this.withAuthRetry(async (agent) => {
+      await agent.com.atproto.repo.deleteRecord({
+        repo: did,
+        collection,
+        rkey,
+      })
+    })
+  }
+
+  async uploadBlob(data: Uint8Array, mimeType: string): Promise<BlobRef> {
+    return this.withAuthRetry(async (agent) => {
       const res = await agent.com.atproto.repo.uploadBlob(data, {
         encoding: mimeType,
       })
       return res.data.blob
-    } catch (err: unknown) {
-      // If we get an auth error, try to refresh and retry
-      const error = err as { status?: number; error?: string }
-      if (
-        error.status === 400 &&
-        (error.error === 'ExpiredToken' || error.error === 'InvalidToken')
-      ) {
-        if (this._refreshJwt) {
-          await this.refreshSession(this._refreshJwt)
-          const retryAgent = await this.getAgent()
-          const res = await retryAgent.com.atproto.repo.uploadBlob(data, {
-            encoding: mimeType,
-          })
-          return res.data.blob
-        }
-      }
-      throw err
-    }
+    })
   }
 }

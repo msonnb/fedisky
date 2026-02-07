@@ -129,15 +129,60 @@ export function setupInboxListeners(ctx: AppContext) {
 
         event?.set('activity.actor_id', actorId.href)
 
-        // When an actor is deleted, the actor and object are the same URI
         const objectId = del.objectId
-        if (objectId == null || objectId.href !== actorId.href) {
-          event?.set('activity.ignored_reason', 'not_actor_deletion')
+        if (objectId == null) {
+          event?.set('activity.ignored_reason', 'missing_object')
           return
         }
 
-        const deleted = await ctx.db.deleteFollowsByActor(actorId.href)
-        event?.set('activity.follows_deleted', deleted)
+        if (objectId.href === actorId.href) {
+          // Actor deletion: delete follows and bridged posts
+          const deleted = await ctx.db.deleteFollowsByActor(actorId.href)
+          event?.set('activity.follows_deleted', deleted)
+
+          // Delete bridged posts for this actor
+          if (ctx.mastodonBridgeAccount.isAvailable()) {
+            const mappings = await ctx.db.getPostMappingsByActor(actorId.href)
+            event?.set('activity.post_mappings_found', mappings.length)
+
+            for (const mapping of mappings) {
+              try {
+                const atUri = new AtUri(mapping.atUri)
+                await ctx.mastodonBridgeAccount.deleteRecord(
+                  atUri.collection,
+                  atUri.rkey,
+                )
+              } catch (err) {
+                event?.set('activity.post_delete_error', String(err))
+              }
+            }
+
+            const deletedMappings = await ctx.db.deletePostMappingsByActor(
+              actorId.href,
+            )
+            event?.set('activity.post_mappings_deleted', deletedMappings)
+          }
+        } else {
+          // Note deletion: delete bridged post if mapping exists
+          if (!ctx.mastodonBridgeAccount.isAvailable()) {
+            event?.set('activity.ignored_reason', 'bridge_not_configured')
+            return
+          }
+
+          const mapping = await ctx.db.getPostMappingByApNoteId(objectId.href)
+          if (!mapping) {
+            event?.set('activity.ignored_reason', 'no_mapping_found')
+            return
+          }
+
+          const atUri = new AtUri(mapping.atUri)
+          await ctx.mastodonBridgeAccount.deleteRecord(
+            atUri.collection,
+            atUri.rkey,
+          )
+          await ctx.db.deletePostMapping(mapping.atUri)
+          event?.set('activity.bridged_post_deleted', mapping.atUri)
+        }
       } catch (err) {
         event?.setError(err instanceof Error ? err : new Error(String(err)))
       }
