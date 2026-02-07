@@ -1,8 +1,8 @@
+import { AtUri } from '@atproto/syntax'
 import { logger } from '../logger'
 
 export interface BacklinkRecord {
   uri: string
-  cid: string
 }
 
 export interface GetBacklinksResponse {
@@ -74,17 +74,16 @@ export class ConstellationClient {
       }
 
       const data = (await res.json()) as {
-        backlinks?: Array<{ uri: string; cid: string }>
-        cursor?: string
+        records?: Array<{ did: string; collection: string; rkey: string }>
+        cursor?: string | null
       }
 
       return {
         backlinks:
-          data.backlinks?.map((b) => ({
-            uri: b.uri,
-            cid: b.cid,
+          data.records?.map((r) => ({
+            uri: AtUri.make(r.did, r.collection, r.rkey).toString(),
           })) ?? [],
-        cursor: data.cursor,
+        cursor: data.cursor ?? undefined,
       }
     } catch (err) {
       logger.warn('failed to fetch backlinks', { err, subject, source })

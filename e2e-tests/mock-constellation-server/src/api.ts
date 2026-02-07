@@ -54,16 +54,21 @@ export function createApiRouter(config: Config, state: State): Router {
     }
 
     const replies = getRepliesForPost(state, subject)
-    const backlinks = replies.map((r) => ({
-      uri: r.replyAtUri,
-      cid: r.replyCid,
-    }))
+    const records = replies.map((r) => {
+      // Parse AT URI: at://did/collection/rkey
+      const parts = r.replyAtUri.replace('at://', '').split('/')
+      return {
+        did: parts[0],
+        collection: parts[1],
+        rkey: parts[2],
+      }
+    })
 
     console.log(
-      `[constellation] getBacklinks subject=${subject} found=${backlinks.length}`,
+      `[constellation] getBacklinks subject=${subject} found=${records.length}`,
     )
 
-    res.json({ backlinks })
+    res.json({ total: records.length, records, cursor: null })
   })
 
   // ============================================================

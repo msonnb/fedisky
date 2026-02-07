@@ -203,15 +203,10 @@ export class ConstellationProcessor {
         return
       }
 
-      const noteId = new URL(
-        `/posts/${encodeURIComponent(replyAtUri)}`,
-        this.ctx.cfg.service.publicUrl,
-      )
-
-      const parentNoteId = new URL(
-        `/posts/${encodeURIComponent(parentAtUri)}`,
-        this.ctx.cfg.service.publicUrl,
-      )
+      const noteId = fedifyContext.getObjectUri(Note, { uri: replyAtUri })
+      const parentNoteId = fedifyContext.getObjectUri(Note, {
+        uri: parentAtUri,
+      })
 
       const note = new Note({
         id: noteId,
