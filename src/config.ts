@@ -29,6 +29,10 @@ export function readEnv() {
     constellationPollInterval: envInt('AP_CONSTELLATION_POLL_INTERVAL'),
     // AppView config
     appViewUrl: envStr('AP_APPVIEW_URL'),
+    // DM notifications config
+    dmNotificationsEnabled: envBool('AP_DM_NOTIFICATIONS_ENABLED'),
+    dmNotificationsPollInterval: envInt('AP_DM_NOTIFICATIONS_POLL_INTERVAL'),
+    dmNotificationsBatchDelay: envInt('AP_DM_NOTIFICATIONS_BATCH_DELAY'),
   }
 }
 
@@ -79,6 +83,12 @@ export interface APFederationConfig {
   /** AppView service URL for fetching public records */
   appView: {
     url: string
+  }
+  /** DM notifications for Fediverse engagement */
+  dmNotifications: {
+    enabled: boolean
+    pollInterval: number
+    batchDelay: number
   }
   /** Allow fetching private network addresses (for E2E testing only) */
   allowPrivateAddress?: boolean
@@ -149,6 +159,11 @@ export function envToConfig(env: ServerEnvironment): APFederationConfig {
     },
     appView: {
       url: env.appViewUrl ?? 'https://public.api.bsky.app',
+    },
+    dmNotifications: {
+      enabled: env.dmNotificationsEnabled ?? true,
+      pollInterval: env.dmNotificationsPollInterval ?? 300000, // 5 minutes
+      batchDelay: env.dmNotificationsBatchDelay ?? 600000, // 10 minutes
     },
     allowPrivateAddress: env.allowPrivateAddress ?? false,
   }

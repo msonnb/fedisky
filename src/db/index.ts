@@ -429,13 +429,16 @@ export class APDatabase {
     return Number(result.numDeletedRows)
   }
 
-  async createLike(data: like.APLike): Promise<like.APLike> {
+  async createLike(
+    data: Omit<like.APLike, 'notifiedAt'>,
+  ): Promise<like.APLike> {
+    const row = { ...data, notifiedAt: null }
     await this.db
       .insertInto('ap_like')
-      .values(data)
+      .values(row)
       .onConflict((oc) => oc.doNothing())
       .execute()
-    return data
+    return row
   }
 
   async deleteLike(activityId: string): Promise<void> {
@@ -470,13 +473,16 @@ export class APDatabase {
     return Number(result?.count ?? 0)
   }
 
-  async createRepost(data: repost.APRepost): Promise<repost.APRepost> {
+  async createRepost(
+    data: Omit<repost.APRepost, 'notifiedAt'>,
+  ): Promise<repost.APRepost> {
+    const row = { ...data, notifiedAt: null }
     await this.db
       .insertInto('ap_repost')
-      .values(data)
+      .values(row)
       .onConflict((oc) => oc.doNothing())
       .execute()
-    return data
+    return row
   }
 
   async deleteRepost(activityId: string): Promise<void> {
@@ -509,5 +515,51 @@ export class APDatabase {
       .where('postAtUri', '=', postAtUri)
       .executeTakeFirst()
     return Number(result?.count ?? 0)
+  }
+
+  async getUnnotifiedLikes(
+    olderThan: string,
+    limit: number,
+  ): Promise<like.APLike[]> {
+    return this.db
+      .selectFrom('ap_like')
+      .selectAll()
+      .where('notifiedAt', 'is', null)
+      .where('createdAt', '<=', olderThan)
+      .orderBy('createdAt', 'asc')
+      .limit(limit)
+      .execute()
+  }
+
+  async getUnnotifiedReposts(
+    olderThan: string,
+    limit: number,
+  ): Promise<repost.APRepost[]> {
+    return this.db
+      .selectFrom('ap_repost')
+      .selectAll()
+      .where('notifiedAt', 'is', null)
+      .where('createdAt', '<=', olderThan)
+      .orderBy('createdAt', 'asc')
+      .limit(limit)
+      .execute()
+  }
+
+  async markLikesNotified(activityIds: string[]): Promise<void> {
+    if (activityIds.length === 0) return
+    await this.db
+      .updateTable('ap_like')
+      .set({ notifiedAt: new Date().toISOString() })
+      .where('activityId', 'in', activityIds)
+      .execute()
+  }
+
+  async markRepostsNotified(activityIds: string[]): Promise<void> {
+    if (activityIds.length === 0) return
+    await this.db
+      .updateTable('ap_repost')
+      .set({ notifiedAt: new Date().toISOString() })
+      .where('activityId', 'in', activityIds)
+      .execute()
   }
 }

@@ -4,6 +4,7 @@ export interface APLike {
   postAuthorDid: string
   apActorId: string
   createdAt: string
+  notifiedAt: string | null
 }
 
 export const tableName = 'ap_like'

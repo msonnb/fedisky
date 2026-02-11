@@ -10,6 +10,7 @@ import { createHttpTerminator, HttpTerminator } from 'http-terminator'
 import { APFederationConfig } from './config'
 import { ConstellationProcessor } from './constellation'
 import { AppContext } from './context'
+import { ChatClient, DmNotificationProcessor } from './dm-notifications'
 import { createRouter } from './federation'
 import { FirehoseProcessor } from './firehose'
 import { logger } from './logger'
@@ -28,6 +29,7 @@ export class APFederationService {
   private terminator?: HttpTerminator
   private firehoseProcessor?: FirehoseProcessor
   private constellationProcessor?: ConstellationProcessor
+  private dmNotificationProcessor?: DmNotificationProcessor
 
   constructor(opts: { ctx: AppContext; app: express.Application }) {
     this.ctx = opts.ctx
@@ -177,6 +179,18 @@ export class APFederationService {
       await this.constellationProcessor.start()
     }
 
+    if (
+      this.ctx.cfg.dmNotifications.enabled &&
+      this.ctx.mastodonBridgeAccount.isAvailable()
+    ) {
+      const chatClient = new ChatClient(this.ctx.mastodonBridgeAccount)
+      this.dmNotificationProcessor = new DmNotificationProcessor(
+        this.ctx,
+        chatClient,
+      )
+      await this.dmNotificationProcessor.start()
+    }
+
     return this.server
   }
 
@@ -191,6 +205,11 @@ export class APFederationService {
     if (this.constellationProcessor) {
       await this.constellationProcessor.stop()
       this.constellationProcessor = undefined
+    }
+
+    if (this.dmNotificationProcessor) {
+      await this.dmNotificationProcessor.stop()
+      this.dmNotificationProcessor = undefined
     }
 
     if (this.terminator) {

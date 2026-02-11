@@ -4,6 +4,7 @@ export interface APRepost {
   postAuthorDid: string
   apActorId: string
   createdAt: string
+  notifiedAt: string | null
 }
 
 export const tableName = 'ap_repost'
